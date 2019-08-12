@@ -7,7 +7,7 @@ import paho.mqtt.client as mqttClient
 import time, sys, json
 from math import pow, atan2, sqrt, cos, sin, pi
 from robotnik_msgs.srv import drive, set_digital_output, set_odometry, place, follow
-from robotnik_msgs.msg import MQTT_ack, RobActionSelect
+from robotnik_msgs.msg import MQTT_ack, RobActionSelect, RobActionStatus
 from os import listdir
 import time
 from nav_msgs.msg import Odometry
@@ -73,16 +73,17 @@ class command_router:
         client.message_callback_add("/robotnik/mqtt_ros_command", self.parse_data)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10)
+        self.action_status_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update)
 
     def parse_data(self, client, userdata, message):
         mqtt_msg = json.loads(message.payload)
         goal = Pose()
         #pose.header.frame_id = 'world'
-        if(mqtt_msg['id'] == ROBOT_ID):
+        if (mqtt_msg['id'] == ROBOT_ID):
             print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
             cart_no_id = mqtt_msg['cartid']
-            command_id = str(mqtt_msg['commandid'])
+            command_id = mqtt_msg['commandid']
             follow_id = mqtt_msg['followid']
             cart_id = '/vicon/'+cart_no_id+'/'+cart_no_id
             # pose_translation
@@ -100,8 +101,13 @@ class command_router:
             pass
         return
 
+    def msg2json(self, msg):
+        y = yaml.load(str(msg))
+        return json.dumps(y,indent=4)
+
     def select_action(self, action, goal, command_id):
-        if(action== 'drive'):
+        if (action== 'drive'):
+            print('Drive Action Selected')
             msg = RobActionSelect()
             msg.action = 'drive'
             msg.goal = goal
@@ -109,8 +115,42 @@ class command_router:
             self.action_pub.publish(msg)
             # if(ros_response.feedback=='success'):
             #    ack_routine('finished')
+        elif (action == 'cancelCurrent'):
+            msg = RobActionSelect()
+            msg.action = 'cancelCurrent'
+            #msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
+        elif (action == 'cancelAll'):
+            msg = RobActionSelect()
+            msg.action = 'cancelAll'
+            #msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
+        elif (action == 'cancelAtAndBefore'):
+            msg = RobActionSelect()
+            msg.action = 'cancelAtAndBefore'
+            #msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
         else:
-            pass		
+            pass
+
+    def status_mapping_update(self, data):
+        msg = MQTT_ack()
+        msg.robotid = ROBOT_ID
+        #msg.cartid =
+        msg.command = data.action
+        msg.commandid = data.command_id
+        if (data.status == 3):
+            msg.response = 'finished'
+        elif (data.status == 1):
+            msg.response = 'moving'
+        else: msg.response = 'free'
+        msg_json = self.msg2json(msg)
+        print('sending status data via mqtt')
+     	client.publish('/robotnik/mqtt_ros_info',msg_json)
+
 '''
     def ack_routine(data_id):
         global ack_msg 

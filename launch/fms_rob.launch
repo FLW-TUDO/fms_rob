@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="id_robot" default="rb1_base_b"/>
+	<arg name="xacro_robot" default="rb1_base_v3_ust20_orbbec"/>
+	<arg name="laser_model" default="sick_tim571"/>
+	<arg name="laser_front_ip" default="192.168.0.3"/>
+	<arg name="rgbd_model" default="orbbec"/>
+
+	<node pkg="fms_rob" name="drive_action" type="drive_action.py" output="screen"/>
+	<node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
+	
+</launch>
