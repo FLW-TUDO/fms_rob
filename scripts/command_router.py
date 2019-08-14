@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import rospy
 from geometry_msgs.msg import Pose, PoseStamped, TransformStamped, Twist, PointStamped
@@ -82,10 +82,10 @@ class command_router:
         if (mqtt_msg['id'] == ROBOT_ID):
             print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
-            cart_no_id = mqtt_msg['cartid']
+            cart_id = mqtt_msg['cartid']
             command_id = mqtt_msg['commandid']
             follow_id = mqtt_msg['followid']
-            cart_id = '/vicon/'+cart_no_id+'/'+cart_no_id
+            #cart_id = '/vicon/'+cart_no_id+'/'+cart_no_id
             # pose_translation
             goal.position.x = mqtt_msg['pose']['translation']['x']
             goal.position.y = mqtt_msg['pose']['translation']['y']
@@ -95,7 +95,7 @@ class command_router:
             goal.orientation.y = mqtt_msg['pose']['rotation']['y']
             goal.orientation.z = mqtt_msg['pose']['rotation']['z']
             goal.orientation.w = mqtt_msg['pose']['rotation']['w']
-            self.select_action(action, goal, command_id)
+            self.select_action(action, goal, command_id, cart_id)
             #ack = ack_routine('mqtt')
         else:
             pass
@@ -105,7 +105,7 @@ class command_router:
         y = yaml.load(str(msg))
         return json.dumps(y,indent=4)
 
-    def select_action(self, action, goal, command_id):
+    def select_action(self, action, goal, command_id, cart_id):
         if (action== 'drive'):
             print('Drive Action Selected')
             msg = RobActionSelect()
@@ -113,8 +113,14 @@ class command_router:
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
-            # if(ros_response.feedback=='success'):
-            #    ack_routine('finished')
+        if (action== 'pick'):
+            print('Pick Action Selected')
+            msg = RobActionSelect()
+            msg.action = 'pick'
+            msg.goal = goal
+            msg.command_id = command_id
+            msg.cart_id = cart_id
+            self.action_pub.publish(msg)
         elif (action == 'cancelCurrent'):
             msg = RobActionSelect()
             msg.action = 'cancelCurrent'
@@ -139,7 +145,7 @@ class command_router:
     def status_mapping_update(self, data):
         msg = MQTT_ack()
         msg.robotid = ROBOT_ID
-        #msg.cartid =
+        msg.cartid = data.cart_id
         msg.command = data.action
         msg.commandid = data.command_id
         if (data.status == 3):

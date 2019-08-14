@@ -9,5 +9,6 @@
 
 	<node pkg="fms_rob" name="drive_action" type="drive_action.py" output="screen"/>
 	<node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
+        <node pkg="fms_rob" name="dock_pose_server" type="dock_pose_server.py" output="screen"/>	
 	
 </launch>

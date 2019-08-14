@@ -4,9 +4,12 @@ import rospy
 import actionlib
 import sys
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose, TransformStamped
 from robotnik_msgs.msg import RobActionSelect, RobActionStatus
+from robotnik_msgs.srv import dockingPose
 from actionlib_msgs.msg import GoalStatusArray
+from math import cos, sin
+import tf_conversions
 
 
 '''
@@ -19,30 +22,36 @@ ROBOT_ID = 'rb1_base_b'
 #######################################################################################
 '''
 
-class drive_action:
+class pick_action:
     def __init__(self):
-        rospy.init_node('drive_action')
+        rospy.init_node('pick_action')
         self.status_flag = False
         self.client = actionlib.SimpleActionClient('rb1_base_b/move_base', MoveBaseAction) 
         self.client.wait_for_server() # wait for server for each goal?
-        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.drive)
+        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
 
-    def drive(self, data):
+    def pick(self, data):
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
-        if (data.action == 'drive'):
+        self.cart_id = data.cart_id
+        if (data.action == 'pick'):
+            dock_pose = self.calc_dock_position(self.cart_id)
+            print(dock_pose)
+            if (dock_pose == None):
+                print('Cart Topic Not Found!')
+                return
             goal = MoveBaseGoal()
             goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
             goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.pose.position.x = data.goal.position.x
-            goal.target_pose.pose.position.y = data.goal.position.y
-            goal.target_pose.pose.orientation.x = data.goal.orientation.x
-            goal.target_pose.pose.orientation.y = data.goal.orientation.y
-            goal.target_pose.pose.orientation.z = data.goal.orientation.z
-            goal.target_pose.pose.orientation.w = data.goal.orientation.w
-            print('Sending Drive goal to action server: ') 
+            goal.target_pose.pose.position.x = dock_pose.position.x
+            goal.target_pose.pose.position.y = dock_pose.position.y
+            goal.target_pose.pose.orientation.x = dock_pose.orientation.x
+            goal.target_pose.pose.orientation.y = dock_pose.orientation.y
+            goal.target_pose.pose.orientation.z = dock_pose.orientation.z
+            goal.target_pose.pose.orientation.w = dock_pose.orientation.w
+            print('Sending Pick goal to action server: ') 
             print(goal)
             #self.client.send_goal_and_wait(goal) # blocking
             self.client.send_goal(goal) # non-blocking
@@ -71,8 +80,18 @@ class drive_action:
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 print(s)
             self.client.stop_tracking_goal()
-            self.goal_flstatus_flagag = False
+            self.status_flag = False
             return
+
+    def calc_dock_position(self, cart_id):
+        print('Calculating Docking Position')
+        rospy.wait_for_service('get_docking_pose')
+        try:
+            get_goal_offset = rospy.ServiceProxy('get_docking_pose', dockingPose)
+            resp1 = get_goal_offset(cart_id)
+            return resp1.dock_pose
+        except rospy.ServiceException:
+            print ('Service call Failed')
 
     def status_update(self, data):
         if (self.status_flag == True):
@@ -84,16 +103,25 @@ class drive_action:
             msg.status = status
             msg.command_id = self.command_id # to be removed after msg modification
             msg.action = self.action # to be removed after msg modification
+            msg.cart_id = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3):
+                self.dock(status)
                 self.client.stop_tracking_goal()
                 self.status_flag = False
                 return
-    
 
+    def dock(self, status):
+        '''
+        Performs the actual docking operation. Moving under the cart, raising the elevator, and then rotating.
+        Docking operation is blocking and cannot be interrupted.
+        '''
+        
+
+    
 if __name__ == '__main__':
     try:
-        da = drive_action()
+        pa = pick_action()
     except KeyboardInterrupt:
         sys.exit()
         print('Interrupted!')
