@@ -17,6 +17,7 @@ def get_docking_pose(req):
     global goal
     goal_result = Pose()
     cart_id = req.cart_id
+    distance = req.distance
     topic = ['/vicon/'+cart_id+'/'+cart_id, 'geometry_msgs/TransformStamped']
     if(topic not in rospy.get_published_topics('/vicon/')):
         print('Cart Topic Not Found!')
@@ -26,13 +27,15 @@ def get_docking_pose(req):
     goal_rot = [goal.transform.rotation.x, goal.transform.rotation.y, goal.transform.rotation.z, goal.transform.rotation.w]
     goal_euler = tf_conversions.transformations.euler_from_quaternion(goal_rot)
     # offset from goal to gurantee proper docking
-    goal_result.position.x = goal.transform.translation.x - (0.50 * cos(goal_euler[2])) # 0.5m offset from cart
-    goal_result.position.y = goal.transform.translation.y - (0.50 * sin(goal_euler[2]))
+    goal_result.position.x = goal.transform.translation.x - (distance * cos(goal_euler[2])) # distance offset from cart
+    goal_result.position.y = goal.transform.translation.y - (distance * sin(goal_euler[2]))
     # get cart orientation
     goal_result.orientation.x = goal_rot[0]
     goal_result.orientation.y = goal_rot[1]
     goal_result.orientation.z = goal_rot[2]
     goal_result.orientation.w = goal_rot[3]
+    print('Docking Pose Calculated')
+    print(goal_result)
     return goal_result
 
 def get_vicon_pose(data):

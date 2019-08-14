@@ -6,7 +6,7 @@ import sys
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Pose, TransformStamped
 from robotnik_msgs.msg import RobActionSelect, RobActionStatus
-from robotnik_msgs.srv import dockingPose
+from robotnik_msgs.srv import dockingPose, dockMove, dockRotate, set_odometry
 from actionlib_msgs.msg import GoalStatusArray
 from math import cos, sin
 import tf_conversions
@@ -31,6 +31,8 @@ class pick_action:
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
+        self.dock_distance = 0.500
+        print('Ready for Picking')
 
     def pick(self, data):
         self.command_id = data.command_id # to be removed after msg modification
@@ -88,10 +90,10 @@ class pick_action:
         rospy.wait_for_service('get_docking_pose')
         try:
             get_goal_offset = rospy.ServiceProxy('get_docking_pose', dockingPose)
-            resp1 = get_goal_offset(cart_id)
-            return resp1.dock_pose
+            resp = get_goal_offset(cart_id, self.dock_distance)
+            return resp.dock_pose
         except rospy.ServiceException:
-            print ('Service call Failed')
+            print ('Calculating Docking Position Service call Failed!')
 
     def status_update(self, data):
         if (self.status_flag == True):
@@ -106,7 +108,7 @@ class pick_action:
             msg.cart_id = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3):
-                self.dock(status)
+                #self.dock(status)
                 self.client.stop_tracking_goal()
                 self.status_flag = False
                 return
@@ -116,6 +118,25 @@ class pick_action:
         Performs the actual docking operation. Moving under the cart, raising the elevator, and then rotating.
         Docking operation is blocking and cannot be interrupted.
         '''
+        print('Initiating Docking')
+        rospy.wait_for_service('dock_move')
+        try:
+            print('Resetting Odom')
+            rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
+            reset_odom1 = rospy.ServiceProxy('/'+ROBOT_ID+'/set_odometry', set_odometry)
+            reset_odom1(0.0,0.0,0.0,0.0)
+            print('Moving under Cart')
+            do_dock_move = rospy.ServiceProxy('dock_move', dockMove)
+            resp = do_dock_move(self.dock_distance)
+            print(resp)
+            return
+        except rospy.ServiceException:
+            print ('Dock Move or Odom Reset Service call Failed!')
+        #if (resp.ret == True):
+        #    try:
+                
+        #    except: 
+
         
 
     
