@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 '''
-Server for moving robot under Cart 
+Server for rotating robot while under cart 
 '''
 
 import rospy
 from geometry_msgs.msg import TransformStamped, Pose
 from math import cos, sin
 import tf_conversions
-from robotnik_msgs.srv import dockMove
+from robotnik_msgs.srv import dockRotate
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 
@@ -26,29 +26,29 @@ ROBOT_ID = 'rb1_base_b'
 
 odom_coor = Odometry()
 
-def initiate_dock_move(req):
+def initiate_dock_rotate(req):
     rospy.Subscriber('/rb1_base_b/dummy_odom', Odometry, get_odom)
     vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
     rospy.sleep(1)
-    distance = req.distance
+    angle = req.angle
     vel_msg = Twist()
-    speed = 0.2
+    speed = 0.5 
     tolerance = 0.03
-    print('Moving under Cart')
-    while (odom_coor.x <= distance):
-        vel_msg.linear.x = speed
-        vel_msg.angular.z = 0
+    print('Rotating Cart')
+    while (odom_coor.x <= angle):
+        vel_msg.linear.x = 0
+        vel_msg.angular.z = speed
         vel_pub.publish(vel_msg)
     vel_msg.linear.x = 0
     vel_pub.publish(vel_msg)
-    if ((odom_coor.x <= distance + tolerance) and (odom_coor.x >= distance - tolerance)):
+    if ((odom_coor.x <= angle + tolerance) and (odom_coor.x >= angle - tolerance)):
         return True
     else:
         return False
 
-def dock_move_server():
-    s = rospy.Service('dock_move', dockMove, initiate_dock_move)
-    print ('Dock Move Server Ready')
+def dock_rotate_server():
+    s = rospy.Service('dock_rotate', dockRotate, initiate_dock_rotate)
+    print ('Dock Rotate Server Ready')
 
 def get_odom(data):
     global odom_coor
@@ -56,6 +56,6 @@ def get_odom(data):
  
 
 if __name__ == "__main__":
-    rospy.init_node('dock_move_server')
-    dock_move_server()
+    rospy.init_node('dock_rotate_server')
+    dock_rotate_server()
     rospy.spin()

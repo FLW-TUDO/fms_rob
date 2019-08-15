@@ -35,7 +35,6 @@ def get_docking_pose(req):
     goal_result.orientation.z = goal_rot[2]
     goal_result.orientation.w = goal_rot[3]
     print('Docking Pose Calculated')
-    print(goal_result)
     return goal_result
 
 def get_vicon_pose(data):
