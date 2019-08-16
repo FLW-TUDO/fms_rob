@@ -7,6 +7,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import PoseStamped
 from robotnik_msgs.msg import RobActionSelect, RobActionStatus
 from actionlib_msgs.msg import GoalStatusArray
+from std_srvs.srv import Empty
 
 
 '''
@@ -44,6 +45,9 @@ class drive_action:
             goal.target_pose.pose.orientation.w = data.goal.orientation.w
             print('Sending Drive goal to action server: ') 
             print(goal)
+            rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
+            reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
+            reset_costmaps()
             #self.client.send_goal_and_wait(goal) # blocking
             self.client.send_goal(goal) # non-blocking
             self.status_flag = True

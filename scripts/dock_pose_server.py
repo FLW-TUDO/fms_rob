@@ -11,6 +11,16 @@ import tf_conversions
 from robotnik_msgs.srv import dockingPose
 
 
+'''
+#######################################################################################
+'''
+
+ROBOT_ID = 'rb1_base_b'
+
+'''
+#######################################################################################
+'''
+
 goal = TransformStamped()
 
 def get_docking_pose(req):
@@ -42,7 +52,7 @@ def get_vicon_pose(data):
     goal = data
 
 def dock_pose_server():
-    s = rospy.Service('get_docking_pose', dockingPose, get_docking_pose)
+    s = rospy.Service('/'+ROBOT_ID+'/get_docking_pose', dockingPose, get_docking_pose)
     print ('Docking Pose Calculation Ready')
  
 

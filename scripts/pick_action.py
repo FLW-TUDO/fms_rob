@@ -11,6 +11,8 @@ from actionlib_msgs.msg import GoalStatusArray
 from std_msgs.msg import String
 from math import cos, sin, pi
 import tf_conversions
+from std_srvs.srv import Empty
+import elevator_test
 
 
 '''
@@ -58,6 +60,9 @@ class pick_action:
             goal.target_pose.pose.orientation.w = dock_pose.orientation.w
             print('Sending Pick goal to action server: ') 
             print(goal)
+            rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
+            reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
+            reset_costmaps()
             #self.client.send_goal_and_wait(goal) # blocking
             self.client.send_goal(goal) # non-blocking
             self.status_flag = True
@@ -90,9 +95,9 @@ class pick_action:
 
     def calc_dock_position(self, cart_id):
         print('Calculating Docking Position')
-        rospy.wait_for_service('get_docking_pose')
+        rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
-            get_goal_offset = rospy.ServiceProxy('get_docking_pose', dockingPose)
+            get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockingPose)
             resp = get_goal_offset(cart_id, self.dock_distance)
             return resp.dock_pose
         except rospy.ServiceException:
@@ -123,7 +128,6 @@ class pick_action:
         Docking operation is blocking and cannot be interrupted.
         '''
         print('Initiating Docking')
-        rospy.wait_for_service('dock_move')
         try:
             print('Resetting Odom')
             rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
@@ -131,32 +135,36 @@ class pick_action:
             reset_odom1(0.0,0.0,0.0,0.0)
             print('Odom Reset Successful')
             print('Moving under Cart')
-            do_dock_move = rospy.ServiceProxy('dock_move', dockMove)
+            rospy.wait_for_service('/'+ROBOT_ID+'/dock_move')
+            do_dock_move = rospy.ServiceProxy('/'+ROBOT_ID+'/dock_move', dockMove)
             resp_move = do_dock_move(self.dock_distance)
-            print('Motion under Cart Successful')
+            print('Moving under Cart Successful')
         except rospy.ServiceException:
             print ('Dock Move OR Odom Reset Service call Failed!')
         if (resp_move.ret == True):
             try:
+                self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
+                print('Raising Elevator')
                 rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
                 do_raise_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
                 resp_raise_elevator = do_raise_elevator(3,True) # 3 --> raise elevator // 2 --> lower elevator
                 rospy.sleep(7) # service returns immedietly, a wait time is needed#
-                print(resp_raise_elevator)
+                #execfile('src/fms_rob/scripts/elevator_test.py')
+                #elevator_test.do_elev_test()
                 print('Elevator Raise Successful')
             except: 
                 print ('Elevator Raise Service call Failed!')
+                
             if (resp_raise_elevator.ret == True):
                 try:
                     print('Rotating Cart')
-                    do_dock_rotate = rospy.ServiceProxy('dock_rotate', dockRotate)
+                    rospy.wait_for_service('/'+ROBOT_ID+'/dock_rotate')
+                    do_dock_rotate = rospy.ServiceProxy('/'+ROBOT_ID+'/dock_rotate', dockRotate)
                     resp_move = do_dock_rotate(self.dock_rotate_angle)
                     print('Rotating Cart Successful')
                 except: 
                     print ('Dock Rotate Service call Failed!')
-
-
-        
+                 
 
     
 if __name__ == '__main__':

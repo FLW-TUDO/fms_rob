@@ -83,7 +83,7 @@ class command_router:
             print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
             cart_id = mqtt_msg['cartid']
-            command_id = mqtt_msg['commandid']
+            command_id = str(mqtt_msg['commandid'])
             follow_id = mqtt_msg['followid']
             #cart_id = '/vicon/'+cart_no_id+'/'+cart_no_id
             # pose_translation

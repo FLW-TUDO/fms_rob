@@ -27,7 +27,7 @@ ROBOT_ID = 'rb1_base_b'
 odom_coor = Odometry()
 
 def initiate_dock_move(req):
-    rospy.Subscriber('/rb1_base_b/dummy_odom', Odometry, get_odom)
+    rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, get_odom)
     vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
     rospy.sleep(1)
     distance = req.distance
@@ -47,7 +47,7 @@ def initiate_dock_move(req):
         return False
 
 def dock_move_server():
-    s = rospy.Service('dock_move', dockMove, initiate_dock_move)
+    s = rospy.Service('/'+ROBOT_ID+'/dock_move', dockMove, initiate_dock_move)
     print ('Dock Move Server Ready')
 
 def get_odom(data):
