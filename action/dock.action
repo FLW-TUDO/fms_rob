@@ -1,0 +1,6 @@
+float64 distance
+float64 angle
+---
+bool res
+---
+nav_msgs/Odometry odom_data

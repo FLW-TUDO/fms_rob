@@ -5,8 +5,9 @@ import actionlib
 import sys
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Pose, TransformStamped
-from robotnik_msgs.msg import RobActionSelect, RobActionStatus
-from robotnik_msgs.srv import dockingPose, dockMove, dockRotate, set_odometry, set_digital_output
+from fms_rob.msg import RobActionSelect, RobActionStatus
+from fms_rob.srv import  dockingPose, dockMove, dockRotate
+from robotnik_msgs.srv import set_odometry, set_digital_output
 from actionlib_msgs.msg import GoalStatusArray
 from std_msgs.msg import String
 from math import cos, sin, pi
@@ -27,7 +28,7 @@ ROBOT_ID = 'rb1_base_b'
 
 class pick_action:
     def __init__(self):
-        rospy.init_node('pick_action')
+        rospy.init_node('pick_action_client')
         self.status_flag = False
         self.client = actionlib.SimpleActionClient('rb1_base_b/move_base', MoveBaseAction) 
         self.client.wait_for_server() # wait for server for each goal?

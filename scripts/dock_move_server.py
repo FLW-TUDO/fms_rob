@@ -8,7 +8,7 @@ import rospy
 from geometry_msgs.msg import TransformStamped, Pose
 from math import cos, sin
 import tf_conversions
-from robotnik_msgs.srv import dockMove
+from fms_rob.srv import dockMove
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 
