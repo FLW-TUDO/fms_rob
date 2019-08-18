@@ -26,6 +26,7 @@ add_service_files(
   dockPose.srv
   dockMove.srv
   dockRotate.srv
+  parkPose.srv
 )
 
 ## Generate actions in the 'action' folder

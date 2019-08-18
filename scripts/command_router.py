@@ -130,6 +130,14 @@ class command_router:
             msg.command_id = command_id
             msg.cart_id = cart_id
             self.action_pub.publish(msg)
+        if (action== 'place'):
+            print('Place Action Selected')
+            msg = RobActionSelect()
+            msg.action = 'place'
+            msg.goal = goal
+            msg.command_id = command_id
+            msg.cart_id = cart_id
+            self.action_pub.publish(msg)
         elif (action == 'cancelCurrent'):
             msg = RobActionSelect()
             msg.action = 'cancelCurrent'

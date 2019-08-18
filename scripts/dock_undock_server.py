@@ -28,7 +28,7 @@ ROBOT_ID = 'rb1_base_b'
 class du_action_server:
 
     def __init__(self):
-        self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False)
+        self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         self.du_server.start()
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom)
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
