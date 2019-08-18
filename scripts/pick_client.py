@@ -6,7 +6,7 @@ import sys
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Pose, TransformStamped
 from fms_rob.msg import RobActionSelect, RobActionStatus
-from fms_rob.srv import  dockingPose, dockMove, dockRotate
+from fms_rob.srv import  dockPose, dockMove, dockRotate
 from robotnik_msgs.srv import set_odometry, set_digital_output
 from actionlib_msgs.msg import GoalStatusArray
 from std_msgs.msg import String
@@ -33,7 +33,7 @@ class pick_action:
         self.client = actionlib.SimpleActionClient('rb1_base_b/move_base', MoveBaseAction) 
         self.client.wait_for_server() # wait for server for each goal?
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
-        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
+        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.dock_distance = 0.500
@@ -98,7 +98,7 @@ class pick_action:
         print('Calculating Docking Position')
         rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
-            get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockingPose)
+            get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
             resp = get_goal_offset(cart_id, self.dock_distance)
             return resp.dock_pose
         except rospy.ServiceException:

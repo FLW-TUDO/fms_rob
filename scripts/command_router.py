@@ -108,6 +108,13 @@ class command_router:
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
+        if (action== 'dock'):
+            print('Dock Action Selected')
+            msg = RobActionSelect()
+            msg.action = 'dock'
+            msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
         if (action== 'pick'):
             print('Pick Action Selected')
             msg = RobActionSelect()
