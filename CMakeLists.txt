@@ -32,7 +32,7 @@ add_service_files(
 add_action_files(
 	DIRECTORY action
 	FILES
-  dock.action
+  dockUndock.action
 )
 
 ## Generate added messages, services and actions with any dependencies listed here

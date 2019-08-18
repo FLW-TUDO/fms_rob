@@ -1,5 +1,6 @@
 float64 distance
 float64 angle
+bool mode
 ---
 bool res
 ---
