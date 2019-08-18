@@ -115,6 +115,13 @@ class command_router:
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
+        if (action== 'undock'):
+            print('Undock Action Selected')
+            msg = RobActionSelect()
+            msg.action = 'undock'
+            msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
         if (action== 'pick'):
             print('Pick Action Selected')
             msg = RobActionSelect()

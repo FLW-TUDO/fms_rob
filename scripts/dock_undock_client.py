@@ -3,11 +3,12 @@
 import rospy
 import actionlib
 import sys
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from fms_rob.msg import dockUndockAction, dockUndockGoal
 from geometry_msgs.msg import PoseStamped
 from fms_rob.msg import RobActionSelect, RobActionStatus
 from actionlib_msgs.msg import GoalStatusArray
 from std_srvs.srv import Empty
+from math import pi
 
 
 '''
@@ -20,35 +21,34 @@ ROBOT_ID = 'rb1_base_b'
 #######################################################################################
 '''
 
-class drive_action:
+class du_action_client:
+    
     def __init__(self):
-        rospy.init_node('drive_action_client')
         self.status_flag = False
-        self.client = actionlib.SimpleActionClient('rb1_base_b/move_base', MoveBaseAction) 
+        self.client = actionlib.SimpleActionClient('do_dock_undock', dockUndockAction) 
         self.client.wait_for_server() # wait for server for each goal?
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.drive)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        print('Ready for Driving')
+        print('Ready for Docking')
 
     def drive(self, data):
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
-        if (data.action == 'drive'):
-            goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-            goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.pose.position.x = data.goal.position.x
-            goal.target_pose.pose.position.y = data.goal.position.y
-            goal.target_pose.pose.orientation.x = data.goal.orientation.x
-            goal.target_pose.pose.orientation.y = data.goal.orientation.y
-            goal.target_pose.pose.orientation.z = data.goal.orientation.z
-            goal.target_pose.pose.orientation.w = data.goal.orientation.w
-            print('Sending Drive goal to action server: ') 
-            print(goal)
-            rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
-            reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
-            reset_costmaps()
+        goal = dockUndockGoal()
+        if (data.action == 'dock'):
+            print('Sending Dock goal to action server: ') 
+            goal.distance = 0.5
+            goal.angle = pi
+            goal.mode = True
+            #self.client.send_goal_and_wait(goal) # blocking
+            self.client.send_goal(goal) # non-blocking
+            self.status_flag = True
+        elif(data.action == 'undock'):
+            print('Sending Undock goal to action server: ') 
+            goal.distance = 0.5
+            goal.angle = pi
+            goal.mode = False
             #self.client.send_goal_and_wait(goal) # blocking
             self.client.send_goal(goal) # non-blocking
             self.status_flag = True
@@ -98,7 +98,8 @@ class drive_action:
 
 if __name__ == '__main__':
     try:
-        da = drive_action()
+        rospy.init_node('dock_client')
+        dc = du_action_client()    
     except KeyboardInterrupt:
         sys.exit()
         print('Interrupted!')

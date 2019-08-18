@@ -104,7 +104,7 @@ class pick_action:
         except rospy.ServiceException:
             print ('Calculating Docking Position Service call Failed!')
 
-    def status_update(self, data):
+    def status_update(self, data): # forwarding status messages
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()
