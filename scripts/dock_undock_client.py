@@ -26,19 +26,20 @@ class du_action_client:
     def __init__(self):
         self.status_flag = False
         self.client = actionlib.SimpleActionClient('do_dock_undock', dockUndockAction) 
+        print('Waiting for dock_undock_server')
         self.client.wait_for_server() # wait for server for each goal?
-        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.drive)
+        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.dock)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
         print('Ready for Docking')
 
-    def drive(self, data):
+    def dock(self, data):
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
         goal = dockUndockGoal()
         if (data.action == 'dock'):
             print('Sending Dock goal to action server: ') 
-            goal.distance = 0.5
+            goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # default: 1.0
             goal.angle = pi
             goal.mode = True
             #self.client.send_goal_and_wait(goal) # blocking
@@ -94,6 +95,10 @@ class du_action_client:
                 self.client.stop_tracking_goal()
                 self.status_flag = False
                 return
+            if (status == 4):
+                self.client.stop_tracking_goal()
+                self.status_flag = False
+                print('Execution Aborted by Server!')
     
 
 if __name__ == '__main__':

@@ -4,12 +4,14 @@ import rospy
 import actionlib
 import sys, time
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped, TransformStamped, Twist
 from fms_rob.msg import dockUndockAction, dockUndockGoal, dockUndockFeedback, dockUndockResult
 from nav_msgs.msg import Odometry
 from robotnik_msgs.srv import set_odometry, set_digital_output
+from rb1_base_msgs.srv import SetElevator
 #from actionlib_msgs.msg import GoalStatusArray
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool, Float32
+from math import pow, atan2, sqrt, cos, sin, pi
 import tf_conversions
 #from std_srvs.srv import Empty
 import elevator_test
@@ -32,39 +34,69 @@ class du_action_server:
         self.du_server.start()
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom)
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
+        self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
+        self.cart_id = 'klt02'
+        #self.cart_id = rospy.get_param(ROBOT_ID+'/fms_rob/cart_id', 'klt01') # default cart: klt01
+        self.klt_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose)
         self.status_flag = False
-        self.move_speed = 0.2
+        self.move_speed = 0.1
+        self.se_move_speed = 0.2
         self.rot_speed = 0.6
         #self.dist_tolerance = 0.005
         self.ang_tolerance = 0.002
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
-        print('Dock-Undock Server Running')
+        ''' PD-Controller settings for secondary move'''
+        self.error_theta= 1.0
+        self.kp_ang = 0.7 #0.7
+        self.kd_ang = 0.1 #0.1
+        self.kp_orient = 0.5
+        self.distance_tolerance = 0.01
+        self.orientation_tolerance = 0.01
+        current_time = None
+        self.sample_time = 0.0001
+        self.current_time = current_time if current_time is not None else time.time()
+        self.last_time = self.current_time
+        self.p_term_ang = 0.0
+        self.d_term_ang = 0.0
+        self.last_error_theta = 0.0
+        self.output = 0.0
+        #self.kp_lin = 0.8
+        self.start_msg = Bool()
+        self.theta_msg = Float32()
         rospy.sleep(1)
+        print('Dock-Undock Server Ready')
 
     def execute(self, goal):
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode
+        '''
+        if (rospy.has_param('/'+ROBOT_ID+'/fms_rob/cart_id')):
+            print(rospy.get_param('/'+ROBOT_ID+'/fms_rob/cart_id'))
+            self.cart_id = rospy.get_param('/'+ROBOT_ID+'/fms_rob/cart_id', 'klt01') # default cart: klt01
+            print(self.cart_id)
+            #self.klt_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose)
+            rospy.sleep(1)
+        else:
+            print('cart_id parameter has Not been set OR is empty!')
+        '''
         success_move = False
+        success_se_move = False # secondary motion to adjust docking distance
         success_elev = False
         success_rotate = False
-        # Reset Odom before moving under cart
-        try:
-            print('Resetting Odom')
-            rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
-            reset_odom1 = rospy.ServiceProxy('/'+ROBOT_ID+'/set_odometry', set_odometry)
-            reset_odom1(0.0,0.0,0.0,0.0)
-            print('Odom Reset Successful')
-        except rospy.ServiceException:
-            print ('Odom Reset Service call Failed!')
         self.result.res = False
         if (elev_mode == True): # True --> Dock // False --> Undock
-            success_move = self.do_du_move(dock_distance) # move under cart
+            success_se_move = self.do_du_se_move(dock_distance) # pre-motion before cart
+            rospy.sleep(0.8)
+            self.reset_odom()
+            success_move = self.do_du_move(dock_distance/2) # move under cart
             success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
         else:
             success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
+            self.reset_odom()
             success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
             success_move = self.do_du_move(dock_distance) # move under cart
         if (success_move and success_elev and success_rotate):
@@ -74,9 +106,78 @@ class du_action_server:
             self.result.res = False
             self.du_server.set_aborted(self.result)
 
-            
+    def reset_odom(self):
+        try:
+            print('Resetting Odom')
+            rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
+            reset_odom1 = rospy.ServiceProxy('/'+ROBOT_ID+'/set_odometry', set_odometry)
+            reset_odom1(0.0,0.0,0.0,0.0)
+            print('Odom Reset Successful')
+        except rospy.ServiceException:
+            print ('Odom Reset Service call Failed!')
+
+    def do_du_se_move(self, distance):
+        #if(data.data == True):
+        success = True
+        rospy.sleep(0.2)
+        vel_msg = Twist()
+        #heading_tolerance = 0.5
+        print('Navigating to Secondary Goal')
+        goal = self.calc_se_dock_position(distance)
+        goal_x = goal[0]
+        goal_y = goal[1]
+        r = rospy.Rate(10)
+        while(self.euclidean_distance(goal_x, goal_y) >= self.distance_tolerance):
+            if (self.du_server.is_preempt_requested()):
+                self.du_server.set_preempted()
+                success = False
+                return success
+            '''
+            while((abs(self.error_theta) > heading_tolerance)): 
+                # Linear velocity in the x-axis.
+                vel_msg.linear.x = 0
+                vel_msg.linear.y = 0
+                vel_msg.linear.z = 0
+                # Angular velocity in the z-axis.
+                vel_msg.angular.x = 0
+                vel_msg.angular.y = 0
+                vel_msg.angular.z = self.angular_vel()
+                self.vel_pub.publish(vel_msg)
+            '''
+            vel_msg.linear.x = self.se_move_speed
+            vel_msg.linear.y = 0
+            vel_msg.linear.z = 0
+            # Angular velocity in the z-axis.
+            vel_msg.angular.x = 0
+            vel_msg.angular.y = 0
+            vel_msg.angular.z = self.angular_vel(goal_x, goal_y)
+            self.vel_pub.publish(vel_msg)
+            r.sleep()
+        vel_msg.linear.x = 0
+        vel_msg.angular.z = 0
+        self.vel_pub.publish(vel_msg)
+        print('Secondary Docking Goal Reached')
+        #rospy.sleep(0.7)
+        #self.start_subscriber.unregister()
+        r = rospy.Rate(10)
+        while(abs(self.cart_theta - self.curr_theta) >= self.orientation_tolerance):
+            if (self.du_server.is_preempt_requested()):
+                self.du_server.set_preempted()
+                success = False
+                return success
+            vel_msg.angular.z = (self.cart_theta - self.curr_theta)*self.kp_orient
+            self.vel_pub.publish(vel_msg)
+            r.sleep()
+        vel_msg.linear.x = 0
+        vel_msg.angular.z = 0
+        self.vel_pub.publish(vel_msg)
+        print('Secondary Docking Goal Orientation Reached')
+        #else:
+        #    pass
+        return success
 
     def do_du_move(self, distance):
+        ''' Final motion under cart '''
         success = True
         vel_msg = Twist()
         r = rospy.Rate(10)
@@ -107,31 +208,37 @@ class du_action_server:
             success = False
             return success
         if (mode == True):
-            elev_act = 3
+            elev_act = 3 # 1
         else:
-            elev_act = 2
+            elev_act = 2 # -1
         try:
-            #self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
+            self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
             print('Moving Elevator')
             time_buffer = time.time()
             while (time.time() - time_buffer <= 5.7): # temporary solution for elevator bug (on robot b)
                 rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
                 move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
                 resp_move_elevator = move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
-                # rospy.sleep(7) # service returns immedietly, a wait time is needed#
+            '''
+            rospy.wait_for_service('/'+ROBOT_ID+'/set_elevator')
+            move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/set_elevator', SetElevator)
+            move_elevator(elev_act) # 1 --> raise elevator // -1 --> lower elevator
+            rospy.sleep(6) # service returns immedietly, a wait time is needed
+            '''
             #execfile('src/fms_rob/scripts/elevator_test.py')
             #elevator_test.do_elev_test()
-            print('Elevator Raise Successful')
+            #rospy.sleep(6)
+            print('Elevator Service call Successful')
             success = True
         except: 
-            print ('Elevator Raise Service call Failed!')
+            print ('Elevator Service call Failed!')
             success = False
         return success
     
     def do_du_rotate(self, angle):
         success = True
         angle_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, angle)
-        print(angle_quat)
+        #print(angle_quat)
         vel_msg = Twist()
         print('Rotating Cart')
         r = rospy.Rate(10)
@@ -152,8 +259,55 @@ class du_action_server:
         return success
 
     def get_odom(self, data):
-        self.odom_data = data
+        self.odom_data = data   
         self.odom_coor = data.pose.pose
+
+    def calc_se_dock_position(self, se_distance):
+        '''calcuation of secondary docking position using the distance between the point calculated by the dock_pose_server and the cart position'''
+        goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2
+        goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2
+        return (goal_x, goal_y)
+
+    def update_pose(self, data):
+        self.curr_pose_trans_x = data.transform.translation.x
+        self.curr_pose_trans_y = data.transform.translation.y
+        rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+        rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
+        self.curr_theta = rot_euler[2]
+    
+    def update_cart_pose(self, data):
+        self.cart_pose_x = data.transform.translation.x
+        self.cart_pose_y = data.transform.translation.y
+        rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+        rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
+        self.cart_theta = rot_euler[2]
+
+    def euclidean_distance(self, goal_x, goal_y):
+        """Euclidean distance between current pose and the next way point."""
+        return sqrt(pow((goal_x - self.curr_pose_trans_x), 2) + pow((goal_y - self.curr_pose_trans_y), 2))
+
+    def steering_angle(self, goal_x, goal_y):
+        """Angle between current orientation and the heading of the next way point"""
+        return atan2(goal_y - self.curr_pose_trans_y, goal_x - self.curr_pose_trans_x)
+
+    def angular_vel(self, goal_x, goal_y):
+        current_time = None
+        self.error_theta= self.steering_angle(goal_x, goal_y) - self.curr_theta
+        self.error_theta= atan2(sin(self.error_theta),cos(self.error_theta))
+        self.theta_msg = self.error_theta
+        #self.theta_pub.publish(self.theta_msg)
+        self.current_time = current_time if current_time is not None else time.time()
+        delta_time = self.current_time - self.last_time
+        delta_error = self.error_theta - self.last_error_theta
+        if (delta_time > self.sample_time):
+            self.p_term_ang = self.kp_ang * self.error_theta
+            self.d_term_ang = 0.0
+            if delta_time > 0:
+                self.dTerm = delta_error / delta_time
+            self.last_time = self.current_time
+            self.last_error_theta = self.error_theta
+            self.output = self.p_term_ang + (self.kd_ang * self.d_term_ang)
+        return self.output
 
     
 if __name__ == '__main__':

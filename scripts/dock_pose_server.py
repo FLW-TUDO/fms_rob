@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-Server for calculating offset position from cart for proper docking operation 
+Server for calculating offset position from cart for docking operation 
 '''
 
 import rospy

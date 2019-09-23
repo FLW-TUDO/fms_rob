@@ -30,7 +30,8 @@ class place_action:
     def __init__(self):
         rospy.init_node('place_action_client')
         self.status_flag = False
-        self.client = actionlib.SimpleActionClient('rb1_base_b/move_base', MoveBaseAction) 
+        self.client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
+        print('Waiting for move_base server')
         self.client.wait_for_server() # wait for server for each goal?
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 

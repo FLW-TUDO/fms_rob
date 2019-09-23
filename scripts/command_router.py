@@ -27,13 +27,7 @@ ROBOT_ID = 'rb1_base_b' #this should be taken from the ROS param server
 broker_address= "gopher.phynetlab.com"
 port = 8883
 Connected = False   #global variable for the state of the connection
-global dock_status 
-dock_status = 0
 #client = mqttClient.Client(ROBOT_ID+str(time.time()))
-global carried_cart
-carried_cart= ''
-global mqtt_inc
-mqtt_inc = 0
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -108,7 +102,7 @@ class command_router:
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
-        if (action== 'dock'):
+        if (action== 'dock'): 
             print('Dock Action Selected')
             msg = RobActionSelect()
             msg.action = 'dock'

@@ -36,7 +36,7 @@ def initiate_dock_rotate(req):
     print(angle_quat)
     vel_msg = Twist()
     speed = 0.6 
-    tolerance = 0.001
+    tolerance = 0.5
     print('Rotating Cart')
     while not ((odom_coor.z <=  angle_quat[2] + tolerance) and (odom_coor.z >=  angle_quat[2] - tolerance)):
         vel_msg.linear.x = 0
