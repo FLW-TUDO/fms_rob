@@ -36,51 +36,58 @@ class place_action:
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
-        self.dock_distance = 0.500
-        self.dock_rotate_angle = pi
-        self.park_distance = 1.1
+        #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
+        self.park_distance = 1.06 # min: 1.02
         print('Ready for Placing')
 
     def place(self, data):
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
-        self.cart_id = data.cart_id
+        self.station_id = data.station_id
+        self.bound_mode = data.bound_mode
         if (data.action == 'place'):
-            parking_spots = self.calc_park_spots(self.cart_id, self.park_distance)
+            parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
             print(parking_spots)
             if (parking_spots == None):
-                print('Cart Topic Not Found!')
+                print('Station Topic Not Found!')
                 return
-            goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-            goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.pose.position.x = parking_spots.inbound.position.x
-            goal.target_pose.pose.position.y = parking_spots.inbound.position.y
-            goal.target_pose.pose.orientation.x = parking_spots.inbound.orientation.x
-            goal.target_pose.pose.orientation.y = parking_spots.inbound.orientation.y
-            goal.target_pose.pose.orientation.z = parking_spots.inbound.orientation.z
-            goal.target_pose.pose.orientation.w = parking_spots.inbound.orientation.w
+            if (self.bound_mode == 'inbound'):
+                goal = MoveBaseGoal()
+                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+                goal.target_pose.header.stamp = rospy.Time.now()
+                goal.target_pose.pose.position.x = parking_spots.inbound.pose.position.x
+                goal.target_pose.pose.position.y = parking_spots.inbound.pose.position.y
+                goal.target_pose.pose.orientation.x = parking_spots.inbound.pose.orientation.x
+                goal.target_pose.pose.orientation.y = parking_spots.inbound.pose.orientation.y
+                goal.target_pose.pose.orientation.z = parking_spots.inbound.pose.orientation.z
+                goal.target_pose.pose.orientation.w = parking_spots.inbound.pose.orientation.w
+            if (self.bound_mode == 'outbound'):
+                goal = MoveBaseGoal()
+                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+                goal.target_pose.header.stamp = rospy.Time.now()
+                goal.target_pose.pose.position.x = parking_spots.outbound.pose.position.x
+                goal.target_pose.pose.position.y = parking_spots.outbound.pose.position.y
+                goal.target_pose.pose.orientation.x = parking_spots.outbound.pose.orientation.x
+                goal.target_pose.pose.orientation.y = parking_spots.outbound.pose.orientation.y
+                goal.target_pose.pose.orientation.z = parking_spots.outbound.pose.orientation.z
+                goal.target_pose.pose.orientation.w = parking_spots.outbound.pose.orientation.w
+            if (self.bound_mode == 'queue'):
+                goal = MoveBaseGoal()
+                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+                goal.target_pose.header.stamp = rospy.Time.now()
+                goal.target_pose.pose.position.x = parking_spots.queue.pose.position.x
+                goal.target_pose.pose.position.y = parking_spots.queue.pose.position.y
+                goal.target_pose.pose.orientation.x = parking_spots.queue.pose.orientation.x
+                goal.target_pose.pose.orientation.y = parking_spots.queue.pose.orientation.y
+                goal.target_pose.pose.orientation.z = parking_spots.queue.pose.orientation.z
+                goal.target_pose.pose.orientation.w = parking_spots.queue.pose.orientation.w
             print('Sending Place goal to action server: ') 
-            print(goal)
             rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
             reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
             reset_costmaps()
             #self.client.send_goal_and_wait(goal) # blocking
             self.client.send_goal(goal) # non-blocking
             self.status_flag = True
-            '''
-            wait = self.client.wait_for_result() # blocking - for this callback
-            if not wait:
-                rospy.logerr("Action server not available!")
-                rospy.signal_shutdown("Action server not available!")
-                return
-            else:
-                self.status_flag = False
-                #self.client.stop_tracking_goal()
-                return
-                #return self.client.get_result()
-            '''
         else:
             if (data.action == 'cancelCurrent'):
                 self.client.cancel_goal()
@@ -96,12 +103,12 @@ class place_action:
             self.status_flag = False
             return
 
-    def calc_park_spots(self, cart_id, park_distance):
+    def calc_park_spots(self, station_id, park_distance):
         print('Calculating Parking Spots')
         rospy.wait_for_service('/'+ROBOT_ID+'/get_parking_spots')
         try:
             get_park_spots = rospy.ServiceProxy('/'+ROBOT_ID+'/get_parking_spots', parkPose)
-            resp = get_park_spots(cart_id, park_distance)
+            resp = get_park_spots(station_id, park_distance)
             return resp
         except rospy.ServiceException:
             print ('Calculating Docking Position Service call Failed!')
@@ -116,7 +123,8 @@ class place_action:
             msg.status = status
             msg.command_id = self.command_id # to be removed after msg modification
             msg.action = self.action # to be removed after msg modification
-            msg.cart_id = self.cart_id
+            msg.station_id = self.station_id
+            msg.bound_mode = self.bound_mode
             self.action_status_pub.publish(msg)
             if (status == 3):
                 #self.dock(status)

@@ -38,7 +38,7 @@ class pick_action:
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
-        self.dock_distance = 1.0
+        self.dock_distance = 1.0 # min: 1.0
         rospy.set_param(ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
         print('Ready for Picking')
@@ -47,7 +47,7 @@ class pick_action:
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
         self.cart_id = data.cart_id
-        rospy.set_param('/'+ROBOT_ID+'/fms_rob/cart_id', self.cart_id) # can also pass the cart_id from upstream and bypass setting it in the parameter server
+        #rospy.set_param('/'+ROBOT_ID+'/fms_rob/cart_id', self.cart_id) # can also pass the cart_id from upstream and bypass setting it in the parameter server
         if (data.action == 'pick'):
             dock_pose = self.calc_dock_position(self.cart_id)
             print(dock_pose)

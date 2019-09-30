@@ -1,6 +1,6 @@
 string station_id
 float64 distance
 ---
-geometry_msgs/Pose inbound
-geometry_msgs/Pose outbound
-geometry_msgs/Pose queue
+geometry_msgs/PoseStamped inbound
+geometry_msgs/PoseStamped outbound
+geometry_msgs/PoseStamped queue

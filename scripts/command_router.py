@@ -68,12 +68,14 @@ class command_router:
         mqtt_msg = json.loads(message.payload)
         goal = Pose()
         #pose.header.frame_id = 'world'
-        if (mqtt_msg['id'] == ROBOT_ID):
+        if (mqtt_msg['robot_id'] == ROBOT_ID):
             print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
-            cart_id = mqtt_msg['cartid']
-            command_id = str(mqtt_msg['commandid'])
-            follow_id = mqtt_msg['followid']
+            cart_id = mqtt_msg['cart_id']
+            command_id = str(mqtt_msg['command_id'])
+            station_id = mqtt_msg['station_id']
+            bound_mode = mqtt_msg['bound_mode']
+            follow_id = mqtt_msg['follow_id']
             #cart_id = '/vicon/'+cart_no_id+'/'+cart_no_id
             # pose_translation
             goal.position.x = mqtt_msg['pose']['translation']['x']
@@ -84,7 +86,7 @@ class command_router:
             goal.orientation.y = mqtt_msg['pose']['rotation']['y']
             goal.orientation.z = mqtt_msg['pose']['rotation']['z']
             goal.orientation.w = mqtt_msg['pose']['rotation']['w']
-            self.select_action(action, goal, command_id, cart_id)
+            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode)
             #ack = ack_routine('mqtt')
         else:
             pass
@@ -94,7 +96,7 @@ class command_router:
         y = yaml.load(str(msg))
         return json.dumps(y,indent=4)
 
-    def select_action(self, action, goal, command_id, cart_id):
+    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode):
         if (action== 'drive'):
             print('Drive Action Selected')
             msg = RobActionSelect()
@@ -130,7 +132,8 @@ class command_router:
             msg.action = 'place'
             msg.goal = goal
             msg.command_id = command_id
-            msg.cart_id = cart_id
+            msg.station_id = station_id
+            msg.bound_mode = bound_mode # inbound, outbound, queue
             self.action_pub.publish(msg)
         elif (action == 'cancelCurrent'):
             msg = RobActionSelect()
