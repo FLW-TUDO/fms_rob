@@ -32,16 +32,18 @@ class pick_action:
         rospy.init_node('pick_action_client')
         self.status_flag = False
         self.client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
-        print('Waiting for move_base server')
+        rospy.loginfo('Waiting for move_base server')
         self.client.wait_for_server() # wait for server for each goal?
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # for resetting purposes on shutdown
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.dock_distance = 1.0 # min: 1.0
         rospy.set_param(ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
-        print('Ready for Picking')
+        rospy.on_shutdown(self.shutdown_hook)
+        rospy.loginfo('Ready for Picking')
 
     def pick(self, data):
         self.command_id = data.command_id # to be removed after msg modification
@@ -50,9 +52,9 @@ class pick_action:
         #rospy.set_param('/'+ROBOT_ID+'/fms_rob/cart_id', self.cart_id) # can also pass the cart_id from upstream and bypass setting it in the parameter server
         if (data.action == 'pick'):
             dock_pose = self.calc_dock_position(self.cart_id)
-            print(dock_pose)
+            rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))
             if (dock_pose == None):
-                print('Cart Topic Not Found!')
+                rospy.logerr('Cart Topic Not Found!')
                 return
             goal = MoveBaseGoal()
             goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
@@ -63,8 +65,8 @@ class pick_action:
             goal.target_pose.pose.orientation.y = dock_pose.orientation.y
             goal.target_pose.pose.orientation.z = dock_pose.orientation.z
             goal.target_pose.pose.orientation.w = dock_pose.orientation.w
-            print('Sending Pick goal to action server: ') 
-            print(goal)
+            rospy.loginfo('Sending Pick goal to action server') 
+            rospy.loginfo('Pick goal coordinates: {}'.format(goal))
             rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
             reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
             reset_costmaps()
@@ -86,33 +88,33 @@ class pick_action:
         else:
             if (data.action == 'cancelCurrent'):
                 self.client.cancel_goal()
-                print('Cancelling Current Goal')
+                rospy.logwarn('Cancelling Current Goal')
             if (data.action == 'cancelAll'):
                 self.client.cancel_all_goals()
-                print('cancelling All Goals')
+                rospy.logwarn('cancelling All Goals')
             if (data.action == 'cancelAtAndBefore'):
                 self.client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
-                print(s)
+                rospy.logwarn(s)
             self.client.stop_tracking_goal()
             self.status_flag = False
             return
 
     def calc_dock_position(self, cart_id):
-        print('Calculating Docking Position')
+        rospy.loginfo('Calculating Docking Position')
         rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
             get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
             resp = get_goal_offset(cart_id, self.dock_distance)
             return resp.dock_pose
         except rospy.ServiceException:
-            print ('Calculating Docking Position Service call Failed!')
+            rospy.logerr('Calculating Docking Position Service call Failed!')
 
     def status_update(self, data): # forwarding status messages
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()
-            print(status)
+            rospy.loginfo(str(status))
             msg = RobActionStatus()
             #self.client.stop_tracking_goal()
             msg.status = status
@@ -127,10 +129,14 @@ class pick_action:
                 self.status_flag = False
                 return
     
+    def shutdown_hook(self):
+        self.klt_num_pub.publish('')
+        rospy.logwarn('Pick Client node shutdown by user')
+    
 if __name__ == '__main__':
     try:
         pa = pick_action()
     except KeyboardInterrupt:
         sys.exit()
-        print('Interrupted!')
+        rospy.logerr('Interrupted!')
     rospy.spin()

@@ -28,9 +28,10 @@ def get_docking_pose(req):
     goal_result = Pose()
     cart_id = req.cart_id
     distance = req.distance
+    rospy.on_shutdown(shutdown_hook)
     topic = ['/vicon/'+cart_id+'/'+cart_id, 'geometry_msgs/TransformStamped']
     if(topic not in rospy.get_published_topics('/vicon/')):
-        print('Cart Topic Not Found!')
+        rospy.logerr('Cart Topic Not Found!')
         return
     rospy.Subscriber('/vicon/'+cart_id+'/'+cart_id, TransformStamped, get_vicon_pose)
     rospy.sleep(1)
@@ -44,7 +45,7 @@ def get_docking_pose(req):
     goal_result.orientation.y = goal_rot[1]
     goal_result.orientation.z = goal_rot[2]
     goal_result.orientation.w = goal_rot[3]
-    print('Docking Pose Calculated')
+    rospy.loginfo('Docking Pose Calculated')
     return goal_result
 
 def get_vicon_pose(data):
@@ -53,10 +54,13 @@ def get_vicon_pose(data):
 
 def dock_pose_server():
     s = rospy.Service('/'+ROBOT_ID+'/get_docking_pose', dockPose, get_docking_pose)
-    print ('Docking Pose Calculation Ready')
+    rospy.loginfo('Docking Pose Calculation Ready')
  
+def shutdown_hook():
+    rospy.logwarn('Dock Pose Server node shutdown by user')
 
 if __name__ == "__main__":
     rospy.init_node('dock_pose_server')
+    rospy.on_shutdown(shutdown_hook)
     dock_pose_server()
     rospy.spin()

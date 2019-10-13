@@ -9,7 +9,11 @@ def callback(config, level):
     rospy.loginfo("""Reconfigure Request: {cart_id}""".format(**config))
     return config
 
+def shutdown_hook():
+    rospy.logwarn('Dynamic Reconf Server node shutdown by user')
+
 if __name__ == "__main__":
     rospy.init_node("dynamic_reconf_server", anonymous = False)
+    rospy.on_shutdown(shutdown_hook)
     srv = Server(dynamic_paramsConfig, callback)
     rospy.spin()

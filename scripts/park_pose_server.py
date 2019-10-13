@@ -36,7 +36,7 @@ def get_parking_spots(req):
     distance = req.distance
     topic = ['/vicon/'+station_id+'/'+station_id, 'geometry_msgs/TransformStamped']
     if(topic not in rospy.get_published_topics('/vicon/')):
-        print('Station Topic Not Found!')
+        rospy.logerr('Station Topic Not Found!')
         return
     rospy.Subscriber('/vicon/'+station_id+'/'+station_id, TransformStamped, get_vicon_pose)
     rospy.sleep(1)    
@@ -69,7 +69,7 @@ def get_parking_spots(req):
     goal_inbound.pose.orientation.y = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[1]
     goal_inbound.pose.orientation.z = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[2]
     goal_inbound.pose.orientation.w = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[3]
-    print('Parking Spots Calculated')
+    rospy.loginfo('Parking Spots Calculated')
     return [goal_outbound_transformed, goal_inbound_transformed, goal_queue_in_vicon_world]
 
 def get_vicon_pose(data):
@@ -78,10 +78,13 @@ def get_vicon_pose(data):
 
 def dock_pose_server():
     s = rospy.Service('/'+ROBOT_ID+'/get_parking_spots', parkPose, get_parking_spots)
-    print ('Parking Spots Calculation Ready')
- 
+    rospy.loginfo('Parking Spots Calculation Ready')
+
+def shutdown_hook():
+    rospy.logwarn('Park Pose Server node shutdown by user')
 
 if __name__ == "__main__":
     rospy.init_node('park_pose_server')
+    rospy.on_shutdown(shutdown_hook)
     dock_pose_server()
     rospy.spin()

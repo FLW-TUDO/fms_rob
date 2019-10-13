@@ -9,6 +9,7 @@ from fms_rob.msg import RobActionSelect, RobActionStatus
 from actionlib_msgs.msg import GoalStatusArray
 from std_srvs.srv import Empty
 from math import pi
+from std_msgs.msg import String
 
 
 '''
@@ -26,19 +27,21 @@ class du_action_client:
     def __init__(self):
         self.status_flag = False
         self.client = actionlib.SimpleActionClient('do_dock_undock', dockUndockAction) 
-        print('Waiting for dock_undock_server')
+        rospy.loginfo('Waiting for dock_undock_server')
         self.client.wait_for_server() # wait for server for each goal?
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.dock)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        print('Ready for Docking')
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # for resetting purposes on shutdown
+        rospy.on_shutdown(self.shutdown_hook)
+        rospy.loginfo('Ready for Docking')
 
     def dock(self, data):
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
         goal = dockUndockGoal()
         if (data.action == 'dock'):
-            print('Sending Dock goal to action server: ') 
+            rospy.loginfo('Sending Dock goal to action server') 
             goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # default: 1.0
             goal.angle = pi
             goal.mode = True
@@ -46,7 +49,7 @@ class du_action_client:
             self.client.send_goal(goal) # non-blocking
             self.status_flag = True
         elif(data.action == 'undock'):
-            print('Sending Undock goal to action server: ') 
+            rospy.loginfo('Sending Undock goal to action server') 
             goal.distance = 0.5
             goal.angle = pi
             goal.mode = False
@@ -68,14 +71,14 @@ class du_action_client:
         else:
             if (data.action == 'cancelCurrent'):
                 self.client.cancel_goal()
-                print('Cancelling Current Goal')
+                rospy.logwarn('Cancelling Current Goal')
             if (data.action == 'cancelAll'):
                 self.client.cancel_all_goals()
-                print('cancelling All Goals')
+                rospy.logwarn('cancelling All Goals')
             if (data.action == 'cancelAtAndBefore'):
                 self.client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
-                print(s)
+                rospy.logwarn(s)
             self.client.stop_tracking_goal()
             self.goal_flstatus_flagag = False
             return
@@ -84,7 +87,7 @@ class du_action_client:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()
-            print(status)
+            rospy.loginfo(str(status))
             msg = RobActionStatus()
             #self.client.stop_tracking_goal()
             msg.status = status
@@ -98,8 +101,11 @@ class du_action_client:
             if (status == 4):
                 self.client.stop_tracking_goal()
                 self.status_flag = False
-                print('Execution Aborted by Server!')
+                rospy.logerr('Execution Aborted by Server!')
     
+    def shutdown_hook(self):
+        self.klt_num_pub.publish('')
+        rospy.logwarn('Dock Undock Client node shutdown by user')
 
 if __name__ == '__main__':
     try:
@@ -107,5 +113,5 @@ if __name__ == '__main__':
         dc = du_action_client()    
     except KeyboardInterrupt:
         sys.exit()
-        print('Interrupted!')
+        rospy.logerr('Interrupted!')
     rospy.spin()

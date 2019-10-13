@@ -31,11 +31,11 @@ Connected = False   #global variable for the state of the connection
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print("Connected to broker")
+        print('Connected to Broker')
         global Connected                #Use global variable
         Connected = True                #Signal connection
     else:
-        print("Connection failed")
+        print('Connection to Broker Failed!')
 
 def on_message(client, userdata, message):
     	#print 'on_message'
@@ -63,6 +63,8 @@ class command_router:
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10)
         self.action_status_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update)
+        rospy.on_shutdown(self.shutdown_hook)
+        rospy.loginfo('Command Router Ready')
 
     def parse_data(self, client, userdata, message):
         mqtt_msg = json.loads(message.payload)
@@ -171,6 +173,10 @@ class command_router:
         print('sending status data via mqtt')
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
 
+    def shutdown_hook(self):
+        self.klt_num_pub.publish('')
+        rospy.logwarn('Command Router node shutdown by user')
+
 '''
     def ack_routine(data_id):
         global ack_msg 
@@ -196,6 +202,7 @@ class command_router:
         client.publish('/robotnik/mqtt_ros_info',ack_data)	
         return
 '''
+
 if __name__ == '__main__':
     try:
         cr = command_router()

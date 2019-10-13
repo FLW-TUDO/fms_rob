@@ -71,7 +71,8 @@ class du_action_server:
         '''Create dynamic reconfigure client client to obtain cart id'''
         client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update)
         rospy.sleep(1)
-        print('Dock-Undock Server Ready')
+        rospy.on_shutdown(self.shutdown_hook)
+        rospy.loginfo('Dock-Undock Server Ready')
 
     def execute(self, goal):
         self.klt_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose)
@@ -114,14 +115,14 @@ class du_action_server:
 
     def reset_odom(self):
         try:
-            print('Resetting Odom')
+            rospy.loginfo('Resetting Odom')
             rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
             reset_odom1 = rospy.ServiceProxy('/'+ROBOT_ID+'/set_odometry', set_odometry)
             reset_odom1(0.0,0.0,0.0,0.0)
             rospy.sleep(0.2)
-            print('Odom Reset Successful')
+            rospy.loginfo('Odom Reset Successful')
         except rospy.ServiceException:
-            print ('Odom Reset Service call Failed!')
+            rospy.logerr('Odom Reset Service call Failed!')
 
     def do_du_se_move(self, distance):
         #if(data.data == True):
@@ -129,7 +130,7 @@ class du_action_server:
         rospy.sleep(0.2)
         vel_msg = Twist()
         #heading_tolerance = 0.5
-        print('Navigating to Secondary Goal')
+        rospy.loginfo('Navigating to Secondary Goal')
         goal = self.calc_se_dock_position(distance)
         goal_x = goal[0]
         goal_y = goal[1]
@@ -164,7 +165,7 @@ class du_action_server:
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
-        print('Secondary Docking Goal Reached')
+        rospy.loginfo('Secondary Docking Goal Reached')
         #rospy.sleep(0.7)
         #self.start_subscriber.unregister()
         r = rospy.Rate(10)
@@ -179,7 +180,7 @@ class du_action_server:
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
-        print('Secondary Docking Goal Orientation Reached')
+        rospy.loginfo('Secondary Docking Goal Orientation Reached')
         #else:
         #    pass
         return success
@@ -189,13 +190,13 @@ class du_action_server:
         success = True
         vel_msg = Twist()
         r = rospy.Rate(10)
-        print(abs(self.odom_coor.position.x))
+        rospy.loginfo('Current Odom value{}'.format(abs(self.odom_coor.position.x)))
         while(abs(self.odom_coor.position.x) < distance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
                 success = False
                 return success
-            print('Moving under Cart')
+            rospy.loginfo('Moving under Cart')
             vel_msg.linear.x = self.move_speed
             vel_msg.angular.z = 0
             self.vel_pub.publish(vel_msg)
@@ -222,11 +223,11 @@ class du_action_server:
             elev_act = 2 # -1
         try:
             self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
-            print('Moving Elevator')
+            rospy.loginfo('Moving Elevator')
             time_buffer = time.time()
             while (time.time() - time_buffer <= 5.7): # temporary solution for elevator bug (on robot b)
                 if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
-                    print('Elevator motion interupted by joystick!')
+                    rospy.logwarn('Elevator motion interupted by joystick!')
                     break 
                 rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
                 move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
@@ -241,10 +242,10 @@ class du_action_server:
             #execfile('src/fms_rob/scripts/elevator_test.py')
             #elevator_test.do_elev_test()
             #rospy.sleep(6)
-            print('Elevator Service call Successful')
+            rospy.loginfo('Elevator Service call Successful')
             success = True
         except: 
-            print ('Elevator Service call Failed!')
+            rospy.logerr('Elevator Service call Failed!')
             success = False
         return success
     
@@ -253,7 +254,7 @@ class du_action_server:
         angle_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, angle)
         #print(angle_quat)
         vel_msg = Twist()
-        print('Rotating Cart')
+        rospy.loginfo('Rotating Cart')
         r = rospy.Rate(10)
         #while not ((self.odom_coor.orientation.z <=  angle_quat[2] + self.ang_tolerance) and (self.odom_coor.orientation.z >=  angle_quat[2] - self.ang_tolerance)):
         while (abs(self.odom_coor.orientation.z) < angle_quat[2] - self.ang_tolerance):
@@ -268,7 +269,7 @@ class du_action_server:
             r.sleep()
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
-        print('Rotation Successful')
+        rospy.loginfo('Rotation Successful')
         return success
 
     def get_odom(self, data):
@@ -329,6 +330,9 @@ class du_action_server:
             self.output = self.p_term_ang + (self.kd_ang * self.d_term_ang)
         return self.output
 
+    def shutdown_hook(self):
+        self.klt_num_pub.publish('')
+        rospy.logwarn('Dock Undock Server node shutdown by user')
     
 if __name__ == '__main__':
     try:
@@ -336,5 +340,5 @@ if __name__ == '__main__':
         du = du_action_server()
     except KeyboardInterrupt:
         sys.exit()
-        print('Interrupted!')
+        rospy.logerr('Interrupted!')
     rospy.spin()

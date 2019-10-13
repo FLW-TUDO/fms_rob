@@ -8,6 +8,7 @@ from geometry_msgs.msg import PoseStamped
 from fms_rob.msg import RobActionSelect, RobActionStatus
 from actionlib_msgs.msg import GoalStatusArray
 from std_srvs.srv import Empty
+from std_msgs.msg import String
 
 
 '''
@@ -29,7 +30,9 @@ class drive_action:
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.drive)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        print('Ready for Driving')
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # for resetting purposes on shutdown
+        rospy.on_shutdown(self.shutdown_hook)
+        rospy.loginfo('Ready for Driving')
 
     def drive(self, data):
         self.command_id = data.command_id # to be removed after msg modification
@@ -44,8 +47,8 @@ class drive_action:
             goal.target_pose.pose.orientation.y = data.goal.orientation.y
             goal.target_pose.pose.orientation.z = data.goal.orientation.z
             goal.target_pose.pose.orientation.w = data.goal.orientation.w
-            print('Sending Drive goal to action server: ') 
-            print(goal)
+            rospy.loginfo('Sending Drive goal to action server') 
+            rospy.loginfo('Drive goal coordinates: {}'.format(goal))
             rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
             reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
             reset_costmaps()
@@ -67,14 +70,14 @@ class drive_action:
         else:
             if (data.action == 'cancelCurrent'):
                 self.client.cancel_goal()
-                print('Cancelling Current Goal')
+                rospy.logwarn('Cancelling Current Goal')
             if (data.action == 'cancelAll'):
                 self.client.cancel_all_goals()
-                print('cancelling All Goals')
+                rospy.logwarn('cancelling All Goals')
             if (data.action == 'cancelAtAndBefore'):
                 self.client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
-                print(s)
+                rospy.logwarn(s)
             self.client.stop_tracking_goal()
             self.goal_flstatus_flagag = False
             return
@@ -83,7 +86,7 @@ class drive_action:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()
-            print(status)
+            rospy.loginfo(str(status))
             msg = RobActionStatus()
             #self.client.stop_tracking_goal()
             msg.status = status
@@ -95,11 +98,14 @@ class drive_action:
                 self.status_flag = False
                 return
     
+    def shutdown_hook(self):
+        self.klt_num_pub.publish('')
+        rospy.logwarn('Drive Client node shutdown by user')
 
 if __name__ == '__main__':
     try:
         da = drive_action()
     except KeyboardInterrupt:
         sys.exit()
-        print('Interrupted!')
+        rospy.logerr('Interrupted!')
     rospy.spin()
