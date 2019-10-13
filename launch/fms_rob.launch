@@ -2,13 +2,18 @@
 <launch>
 
 	<arg name="id_robot" default="rb1_base_b"/>
-	<arg name="xacro_robot" default="rb1_base_v3_ust20_orbbec"/>
-	<arg name="laser_model" default="sick_tim571"/>
-	<arg name="laser_front_ip" default="192.168.0.3"/>
-	<arg name="rgbd_model" default="orbbec"/>
+	<param name="ROBOT_ID" type="str" value="$(arg id_robot)"/>
 
-	<node pkg="fms_rob" name="drive_action" type="drive_action.py" output="screen"/>
-	<node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
+	<group ns="$(arg id_robot)">
+		<node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
         <node pkg="fms_rob" name="dock_pose_server" type="dock_pose_server.py" output="screen"/>	
+        <node pkg="fms_rob" name="dock_undock_server" type="dock_undock_server.py" output="screen"/>	
+        <node pkg="fms_rob" name="dock_undock_client" type="dock_undock_client.py" output="screen"/>	
+        <node pkg="fms_rob" name="drive_client" type="drive_client.py" output="screen"/>	
+        <node pkg="fms_rob" name="pick_client" type="pick_client.py" output="screen"/>	
+        <node pkg="fms_rob" name="place_client" type="place_client.py" output="screen"/>	
+        <node pkg="fms_rob" name="park_pose_server" type="park_pose_server.py" output="screen"/>
+        <node pkg="fms_rob" name="dynamic_reconf_server" type="dynamic_reconf_server.py" output="screen"/>		
+	</group>
 	
 </launch>

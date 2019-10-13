@@ -20,7 +20,7 @@ import elevator_test
 #######################################################################################
 '''
 
-ROBOT_ID = 'rb1_base_b'
+ROBOT_ID = rospy.get_param('/ROBOT_ID')
 
 '''
 #######################################################################################
@@ -48,13 +48,13 @@ class place_action:
         if (data.action == 'place'):
             parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
             print(parking_spots)
+            goal = MoveBaseGoal()
+            goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+            goal.target_pose.header.stamp = rospy.Time.now()
             if (parking_spots == None):
                 print('Station Topic Not Found!')
                 return
             if (self.bound_mode == 'inbound'):
-                goal = MoveBaseGoal()
-                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-                goal.target_pose.header.stamp = rospy.Time.now()
                 goal.target_pose.pose.position.x = parking_spots.inbound.pose.position.x
                 goal.target_pose.pose.position.y = parking_spots.inbound.pose.position.y
                 goal.target_pose.pose.orientation.x = parking_spots.inbound.pose.orientation.x
@@ -62,9 +62,6 @@ class place_action:
                 goal.target_pose.pose.orientation.z = parking_spots.inbound.pose.orientation.z
                 goal.target_pose.pose.orientation.w = parking_spots.inbound.pose.orientation.w
             if (self.bound_mode == 'outbound'):
-                goal = MoveBaseGoal()
-                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-                goal.target_pose.header.stamp = rospy.Time.now()
                 goal.target_pose.pose.position.x = parking_spots.outbound.pose.position.x
                 goal.target_pose.pose.position.y = parking_spots.outbound.pose.position.y
                 goal.target_pose.pose.orientation.x = parking_spots.outbound.pose.orientation.x
@@ -72,9 +69,6 @@ class place_action:
                 goal.target_pose.pose.orientation.z = parking_spots.outbound.pose.orientation.z
                 goal.target_pose.pose.orientation.w = parking_spots.outbound.pose.orientation.w
             if (self.bound_mode == 'queue'):
-                goal = MoveBaseGoal()
-                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-                goal.target_pose.header.stamp = rospy.Time.now()
                 goal.target_pose.pose.position.x = parking_spots.queue.pose.position.x
                 goal.target_pose.pose.position.y = parking_spots.queue.pose.position.y
                 goal.target_pose.pose.orientation.x = parking_spots.queue.pose.orientation.x
