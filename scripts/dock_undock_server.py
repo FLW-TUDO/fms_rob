@@ -50,7 +50,7 @@ class du_action_server:
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
         ''' PD-Controller settings for secondary move'''
-        self.error_theta= 1.0
+        self.error_theta = 1.0
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
         self.kp_orient = 0.5
@@ -196,7 +196,7 @@ class du_action_server:
                 self.du_server.set_preempted()
                 success = False
                 return success
-            rospy.loginfo('Moving under Cart')
+            rospy.loginfo_throttle(1, 'Moving under Cart') # periodic logging
             vel_msg.linear.x = self.move_speed
             vel_msg.angular.z = 0
             self.vel_pub.publish(vel_msg)

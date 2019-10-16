@@ -113,7 +113,8 @@ class place_action:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()
-            rospy.loginfo(str(status))
+            #rospy.loginfo(str(status))
+            print(status)
             msg = RobActionStatus()
             #self.client.stop_tracking_goal()
             msg.status = status
