@@ -5,7 +5,7 @@ import rospy
 from dynamic_reconfigure.server import Server
 from fms_rob.cfg import dynamic_paramsConfig
 
-def callback(config, level):
+def callback(config, level): # callback called when a parameter is updated
     rospy.loginfo("""Reconfigure Request: {cart_id}""".format(**config))
     return config
 

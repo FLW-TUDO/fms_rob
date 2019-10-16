@@ -23,7 +23,7 @@ import elevator_test
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID')
+ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
 
 '''
 #######################################################################################
@@ -69,7 +69,7 @@ class du_action_server:
         self.start_msg = Bool()
         self.theta_msg = Float32()
         '''Create dynamic reconfigure client client to obtain cart id'''
-        client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update)
+        reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update)
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook)
         rospy.loginfo('Dock-Undock Server Ready')

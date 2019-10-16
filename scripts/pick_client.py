@@ -15,13 +15,14 @@ import tf_conversions
 from std_srvs.srv import Empty
 import elevator_test
 import time
+import dynamic_reconfigure.client
 
 
 '''
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID')
+ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
 
 '''
 #######################################################################################
@@ -42,6 +43,7 @@ class pick_action:
         self.dock_distance = 1.0 # min: 1.0
         rospy.set_param(ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30)
         rospy.on_shutdown(self.shutdown_hook)
         rospy.loginfo('Ready for Picking')
 
@@ -49,6 +51,7 @@ class pick_action:
         self.command_id = data.command_id # to be removed after msg modification
         self.action = data.action # to be removed after msg modification
         self.cart_id = data.cart_id
+        self.reconf_client.update_configuration({"cart_id": self.cart_id})
         #rospy.set_param('/'+ROBOT_ID+'/fms_rob/cart_id', self.cart_id) # can also pass the cart_id from upstream and bypass setting it in the parameter server
         if (data.action == 'pick'):
             dock_pose = self.calc_dock_position(self.cart_id)
