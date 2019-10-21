@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+'''
+A client that requests the navigation of the robot to a station. The exact location
+for parking next to the station is specified by the bound mode sent by user (inbound
+- outbound - queue). It acts as a client to ROS's built in move base node, which is 
+an implementation of an action server. Please note that the status message architecture
+follows the Goal Status Array type specified in ROS actions by default.
+'''
 
 import rospy
 import actionlib
@@ -19,7 +26,7 @@ from std_srvs.srv import Empty
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
+ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id is set in the package's launch file
 
 '''
 #######################################################################################
@@ -28,21 +35,24 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
 class place_action:
     def __init__(self):
         rospy.init_node('place_action_client')
-        self.status_flag = False
+        self.status_flag = False # used to throttle further message sending after action execution
         self.client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
         rospy.loginfo('Waiting for move_base server')
-        self.client.wait_for_server() # wait for server for each goal?
+        self.client.wait_for_server()  # wait for server start up
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # for resetting purposes on shutdown
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.park_distance = 1.06 # min: 1.02
-        rospy.on_shutdown(self.shutdown_hook)
+        rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Ready for Placing')
 
     def place(self, data):
-        self.command_id = data.command_id # to be removed after msg modification
+        '''
+        Executes the placing operation
+        '''
+        self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         self.station_id = data.station_id
         self.bound_mode = data.bound_mode
@@ -77,7 +87,7 @@ class place_action:
                 goal.target_pose.pose.orientation.z = parking_spots.queue.pose.orientation.z
                 goal.target_pose.pose.orientation.w = parking_spots.queue.pose.orientation.w
             rospy.loginfo('Sending Place goal to action server') 
-            rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps')
+            rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
             reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
             reset_costmaps()
             #self.client.send_goal_and_wait(goal) # blocking
@@ -99,6 +109,10 @@ class place_action:
             return
 
     def calc_park_spots(self, station_id, park_distance):
+        '''
+        Calls a service to Calculate the location of 3 parking spots next to the workstation
+        (inbound - outbound - queue)
+        '''
         rospy.loginfo('Calculating Parking Spots')
         rospy.wait_for_service('/'+ROBOT_ID+'/get_parking_spots')
         try:
@@ -108,11 +122,13 @@ class place_action:
         except rospy.ServiceException:
             rospy.logerr('Calculating Docking Position Service call Failed!')
 
-    def status_update(self, data): # forwarding status messages
+    def status_update(self, data):
+        '''
+        Forwarding status messages upstream
+        '''
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()
-            #rospy.loginfo(str(status))
             print(status)
             msg = RobActionStatus()
             #self.client.stop_tracking_goal()
@@ -122,15 +138,13 @@ class place_action:
             msg.station_id = self.station_id
             msg.bound_mode = self.bound_mode
             self.action_status_pub.publish(msg)
-            if (status == 3):
-                #self.dock(status)
-                #self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
+            if (status == 3): # if action execution is successful 
                 self.client.stop_tracking_goal()
                 self.status_flag = False
                 return                 
 
     def shutdown_hook(self):
-        self.klt_num_pub.publish('')
+        self.klt_num_pub.publish('')  # resets the picked up cart number in the ros_mocap package
         rospy.logwarn('Place Client node shutdown by user')
     
 if __name__ == '__main__':

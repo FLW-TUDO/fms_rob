@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-
 '''
-Server for calculating offset position from cart for docking operation 
+Server for calculating offset position from cart for docking operation.
+Please note that the calculation of the cart position is reliant on 
+the pose published from vicon.
 '''
 
 import rospy
@@ -15,7 +16,7 @@ from fms_rob.srv import dockPose
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
+ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id is set in the package's launch file
 
 '''
 #######################################################################################
@@ -41,7 +42,7 @@ def get_docking_pose(req):
     goal_result.position.x = goal.transform.translation.x - (distance * cos(goal_euler[2])) # distance offset from cart
     goal_result.position.y = goal.transform.translation.y - (distance * sin(goal_euler[2]))
     # get cart orientation
-    goal_result.orientation.x = goal_rot[0]
+    goal_result.orientation.x = goal_rot[0] # same orientation as cart
     goal_result.orientation.y = goal_rot[1]
     goal_result.orientation.z = goal_rot[2]
     goal_result.orientation.w = goal_rot[3]
@@ -49,6 +50,9 @@ def get_docking_pose(req):
     return goal_result
 
 def get_vicon_pose(data):
+    '''
+    Returns the location of the cart in Vicon
+    '''
     global goal
     goal = data
 

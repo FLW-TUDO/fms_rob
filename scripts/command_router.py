@@ -17,7 +17,7 @@ import yaml
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
+ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id is set in the package's launch file
 
 '''
 #######################################################################################

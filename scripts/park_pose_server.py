@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 '''
-Server for calculating parking positions around a workstation 
+Server for calculating parking positions around a workstation.
+Please note that the calculation of the station position is 
+reliant on the pose published from vicon.
 '''
 
 import rospy
@@ -16,7 +18,7 @@ import tf
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
+ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id is set in the package's launch file
 
 '''
 #######################################################################################
@@ -56,16 +58,9 @@ def get_parking_spots(req):
     goal_queue.pose.position.x -= distance
     goal_queue.pose.position.y += distance
     goal_queue_in_vicon_world = queue_to_station_listener.transformPose('vicon_world', goal_queue)
-    '''
-    goal_outbound.position.x = station_pose.transform.translation.x + (distance * cos(station_pose_euler[2]))
-    goal_outbound.position.y = station_pose.transform.translation.y - (distance * sin(station_pose_euler[2]))
-    goal_inbound.position.x = station_pose.transform.translation.x - (distance * cos(station_pose_euler[2])) # - cos
-    goal_inbound.position.y = station_pose.transform.translation.y + (distance * sin(station_pose_euler[2])) # + sin
-    goal_queue.position.x = station_pose.transform.translation.x - (distance * cos(station_pose_euler[2]))
-    goal_queue.position.y = station_pose.transform.translation.y - (distance * sin(station_pose_euler[2]))
-    '''
+
     # orientation wrt station
-    goal_inbound.pose.orientation.x = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[0]
+    goal_inbound.pose.orientation.x = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[0] # same orientaiton as the station
     goal_inbound.pose.orientation.y = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[1]
     goal_inbound.pose.orientation.z = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[2]
     goal_inbound.pose.orientation.w = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[3]
@@ -73,6 +68,9 @@ def get_parking_spots(req):
     return [goal_outbound_transformed, goal_inbound_transformed, goal_queue_in_vicon_world]
 
 def get_vicon_pose(data):
+    '''
+    Returns the location of the station in Vicon
+    '''
     global station_pose
     station_pose = data
 

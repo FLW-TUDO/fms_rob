@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+'''
+Server for dynamically altering parameters that are shared between 
+nodes at runtime 
+'''
 
 import rospy
 
