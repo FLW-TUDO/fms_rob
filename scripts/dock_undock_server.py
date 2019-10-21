@@ -16,7 +16,7 @@ from math import pow, atan2, sqrt, cos, sin, pi
 import tf_conversions
 #from std_srvs.srv import Empty
 import dynamic_reconfigure.client
-import elevator_test
+#import elevator_test
 
 
 '''
@@ -40,7 +40,6 @@ class du_action_server:
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         #self.cart_id = rospy.getP(ROBOT_ID+'/fms_rob/cart_id', 'klt01') # default cart: klt01        
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
-        self.status_flag = False
         self.move_speed = 0.2
         #self.se_move_speed = 0.2
         #self.se_move_p_gain = 0.6

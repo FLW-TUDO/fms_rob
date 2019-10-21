@@ -30,10 +30,10 @@ class du_action_client:
         rospy.loginfo('Waiting for dock_undock_server')
         self.client.wait_for_server() # wait for server for each goal?
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.dock)
-        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from action server - use feedback instead ?
+        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/do_dock_undock/status', GoalStatusArray, self.status_update) # status from action server   
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # for resetting purposes on shutdown
-        rospy.on_shutdown(self.shutdown_hook)
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
+        rospy.on_shutdown(self.shutdown_hook) # for resetting purposes on shutdown
         rospy.loginfo('Ready for Docking')
 
     def dock(self, data):

@@ -13,7 +13,6 @@ from std_msgs.msg import String
 from math import cos, sin, pi
 import tf_conversions
 from std_srvs.srv import Empty
-import elevator_test
 import time
 import dynamic_reconfigure.client
 

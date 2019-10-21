@@ -1,16 +1,16 @@
 #!/usr/bin/env python
+'''
+A node that distributes MQTT messages sent by the user to respective clients     
+'''
 
 import rospy
 from geometry_msgs.msg import Pose
 from std_msgs.msg import String
 import paho.mqtt.client as mqttClient
 import time, sys, json
-#from math import pow, atan2, sqrt, cos, sin, pi
-#from robotnik_msgs.srv import drive, set_digital_output, set_odometry, place, follow
 from robotnik_msgs.msg import MQTT_ack
 from fms_rob.msg import RobActionSelect, RobActionStatus
 import yaml
-#import tf_conversions
 
 
 '''
@@ -23,17 +23,18 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b')
 #######################################################################################
 '''
 
-# MQTT Settings
+'''
+MQTT Settings
+'''
 broker_address= "gopher.phynetlab.com"
 port = 8883
-Connected = False   #global variable for the state of the connection
-#client = mqttClient.Client(ROBOT_ID+str(time.time()))
+Connected = False  
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print('Connected to Broker')
-        global Connected                #Use global variable
-        Connected = True                #Signal connection
+        global Connected                
+        Connected = True                
     else:
         print('Connection to Broker Failed!')
 
@@ -59,46 +60,51 @@ client.subscribe("/robotnik/#", 0) # Topics with wild card and a robotnik namesp
 class command_router:
     def __init__(self):
         rospy.init_node('command_router')
-        client.message_callback_add("/robotnik/mqtt_ros_command", self.parse_data)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
-        self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10)
-        self.action_status_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update)
-        rospy.on_shutdown(self.shutdown_hook)
+        client.message_callback_add("/robotnik/mqtt_ros_command", self.parse_data) # commands received from user ex: pick, place, etc
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+        self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10) # topic to which the parsed action form the user is published
+        self.action_status_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update) # pubilshes status data back to user via MQTT
+        rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Command Router Ready')
 
     def parse_data(self, client, userdata, message):
+        '''
+        Parses data sent by user via MQTT
+        '''
         mqtt_msg = json.loads(message.payload)
         goal = Pose()
-        #pose.header.frame_id = 'world'
         if (mqtt_msg['robot_id'] == ROBOT_ID):
             print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
-            cart_id = mqtt_msg['cart_id']
-            command_id = str(mqtt_msg['command_id'])
-            station_id = mqtt_msg['station_id']
-            bound_mode = mqtt_msg['bound_mode']
-            follow_id = mqtt_msg['follow_id']
-            #cart_id = '/vicon/'+cart_no_id+'/'+cart_no_id
-            # pose_translation
+            cart_id = mqtt_msg['cart_id'] # cart to be picked
+            command_id = str(mqtt_msg['command_id']) # string for syncing commands - not used 
+            station_id = mqtt_msg['station_id'] # station to place the cart at
+            bound_mode = mqtt_msg['bound_mode'] # position relative to station
+            cancellation_stamp = mqtt_msg['cancellation_stamp']
+            follow_id = mqtt_msg['follow_id'] # id of robot to be followed - not used
+            # pose translation
             goal.position.x = mqtt_msg['pose']['translation']['x']
             goal.position.y = mqtt_msg['pose']['translation']['y']
             goal.position.z = mqtt_msg['pose']['translation']['z']
-            # pose.orientation
+            # pose orientation
             goal.orientation.x = mqtt_msg['pose']['rotation']['x']
             goal.orientation.y = mqtt_msg['pose']['rotation']['y']
             goal.orientation.z = mqtt_msg['pose']['rotation']['z']
             goal.orientation.w = mqtt_msg['pose']['rotation']['w']
-            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode)
-            #ack = ack_routine('mqtt')
+            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp)
         else:
             pass
         return
 
     def msg2json(self, msg):
+        '''Converts ROS messages into json format'''
         y = yaml.load(str(msg))
         return json.dumps(y,indent=4)
 
-    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode):
+    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp):
+        '''
+        Reroutes parsed actions sent from user to the interested (corresponding) clients
+        '''
         if (action== 'drive'):
             print('Drive Action Selected')
             msg = RobActionSelect()
@@ -137,29 +143,30 @@ class command_router:
             msg.station_id = station_id
             msg.bound_mode = bound_mode # inbound, outbound, queue
             self.action_pub.publish(msg)
-        elif (action == 'cancelCurrent'):
+        elif (action == 'cancelCurrent'): # cancel current active goal
             msg = RobActionSelect()
             msg.action = 'cancelCurrent'
-            #msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
-        elif (action == 'cancelAll'):
+        elif (action == 'cancelAll'): # cancel all goals
             msg = RobActionSelect()
             msg.action = 'cancelAll'
-            #msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
-        elif (action == 'cancelAtAndBefore'):
+        elif (action == 'cancelAtAndBefore'): # cancel goals at and before a certain timestamp
             msg = RobActionSelect()
             msg.action = 'cancelAtAndBefore'
-            #msg.goal = goal
             msg.command_id = command_id
+            msg.cancellation_stamp = cancellation_stamp
             self.action_pub.publish(msg)
         else:
             pass
 
     def status_mapping_update(self, data):
-        msg = MQTT_ack()
+        '''
+        Publishes status messages back to user via MQTT
+        '''
+        msg = MQTT_ack() # custom msg type that acts as container for ros messages pre-sending back to user
         msg.robotid = ROBOT_ID
         msg.cartid = data.cart_id
         msg.command = data.action
@@ -174,34 +181,12 @@ class command_router:
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
 
     def shutdown_hook(self):
-        self.klt_num_pub.publish('')
+        '''
+        Shutdown callback function
+        '''
+        self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         rospy.logwarn('Command Router node shutdown by user')
 
-'''
-    def ack_routine(data_id):
-        global ack_msg 
-        #ack_msg = ''
-        global robot_id, action, cart_id, cart_no_id, command_id, follow_id
-        if(data_id == 'mqtt'):
-            ack_msg.response = 'ack'
-        elif(data_id == 'move'):
-            ack_msg.response = 'moving'
-        elif(data_id == 'finished'):
-            ack_msg.response = 'finished'
-        elif(data_id == 'free'):
-            ack_msg.response = 'free'
-        elif(data_id == 'busy'):
-            ack_msg.response = 'busy'
-        if(cart_no_id != ''):
-            ack_msg.cartid = cart_no_id
-        if(robot_id != ''):
-            ack_msg.robotid = robot_id
-        ack_msg.command = action
-        ack_msg.commandid = command_id
-        ack_data = msg2json(ack_msg)
-        client.publish('/robotnik/mqtt_ros_info',ack_data)	
-        return
-'''
 
 if __name__ == '__main__':
     try:
