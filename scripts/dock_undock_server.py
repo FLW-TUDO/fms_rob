@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+'''
+An action server to execute both the docking and undocking operations.
+The docking operation is composed of moving under cart, lifting the elevator, 
+then rotation the cart. Undocking is composed of lowering the elevator, rotating 
+the robot under the cart, then moving out from under the cart. 
+Please note that the docking operation is executed after the robot has been 
+positioned in the picking location.
+'''
 
 import rospy
 import actionlib
@@ -34,11 +42,10 @@ class du_action_server:
     def __init__(self):
         self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         self.du_server.start()
-        self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom)
+        self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
+        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
-        #self.cart_id = rospy.getP(ROBOT_ID+'/fms_rob/cart_id', 'klt01') # default cart: klt01        
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         self.move_speed = 0.2
         #self.se_move_speed = 0.2
