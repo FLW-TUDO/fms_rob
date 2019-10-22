@@ -80,7 +80,7 @@ class du_action_server:
         self.klt_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose)
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
-        elev_mode = goal.mode
+        elev_mode = goal.mode # docking or undocking
         success_move = False
         success_se_move = False # secondary motion to adjust docking distance
         success_elev = False
@@ -94,10 +94,10 @@ class du_action_server:
             success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
         else:
-            success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
+            success_elev = self.do_du_elev(elev_mode)
             self.reset_odom()
-            success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
-            success_move = self.do_du_move(dock_distance) # move under cart
+            success_rotate = self.do_du_rotate(dock_angle) 
+            success_move = self.do_du_move(dock_distance)
         if (success_move and success_elev and success_rotate):
             self.result.res = True
             self.du_server.set_succeeded(self.result)
@@ -195,8 +195,8 @@ class du_action_server:
     def do_du_elev(self, mode):
         '''
         Raising or lowering of the elevator. The vicon reference to the robot (i.e: robot id)
-        is changed to being that of the cart for further tracking of the robot using the 
-        ros_mocap packagewhile under the cart.
+        is changed to being that of the cart for further tracking of the robot (through the 
+        ros_mocap package) while under the cart.
         '''
         success = True
         if (self.du_server.is_preempt_requested()):
@@ -204,26 +204,20 @@ class du_action_server:
             success = False
             return success
         if (mode == True):
-            elev_act = 3 # 1
+            elev_act = 3
         else:
-            elev_act = 2 # -1
+            elev_act = 2 
         try:
             self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
             rospy.loginfo('Moving Elevator')
             time_buffer = time.time()
-            while (time.time() - time_buffer <= 5.7): # solution for elevator bug (on robot b)
+            while (time.time() - time_buffer <= 5.7): # solution for elevator bug
                 if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                     rospy.logwarn('Elevator motion interupted by joystick!')
                     break 
                 rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
                 move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
                 move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
-            '''
-            rospy.wait_for_service('/'+ROBOT_ID+'/set_elevator')
-            move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/set_elevator', SetElevator)
-            move_elevator(elev_act) # 1 --> raise elevator // -1 --> lower elevator
-            rospy.sleep(6) # service returns immedietly, a wait time is needed
-            '''
             rospy.loginfo('Elevator Service call Successful')
             success = True
         except: 
@@ -256,6 +250,9 @@ class du_action_server:
         return success
 
     def get_odom(self, data):
+        '''
+        Obtains current odom readings
+        '''
         self.odom_data = data   
         self.odom_coor = data.pose.pose
 
@@ -290,7 +287,7 @@ class du_action_server:
 
     def joy_update(self, data):
         '''
-        Getting joystick data for use in case of interruption during elevator motion
+        Getting joystick data for usage in case of interruption during elevator motion
         '''
         self.joy_data = data
     
@@ -315,7 +312,7 @@ class du_action_server:
 
     def angular_vel(self, goal_x, goal_y):
         '''
-        PD controller angle output calculation
+        PD controller output calculation
         '''
         current_time = None
         self.error_theta= self.goal_angle(goal_x, goal_y) - self.curr_theta
