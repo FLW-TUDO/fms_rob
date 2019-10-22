@@ -48,10 +48,7 @@ class du_action_server:
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         self.move_speed = 0.2
-        #self.se_move_speed = 0.2
-        #self.se_move_p_gain = 0.6
         self.rot_speed = 0.7
-        #self.dist_tolerance = 0.005
         self.ang_tolerance = 0.002
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
@@ -71,7 +68,6 @@ class du_action_server:
         self.d_term_ang = 0.0
         self.last_error_theta = 0.0
         self.output = 0.0
-        #self.kp_lin = 0.8
         self.start_msg = Bool()
         self.theta_msg = Float32()
         '''Create dynamic reconfigure client client to obtain cart id'''
@@ -129,11 +125,9 @@ class du_action_server:
         The aim is to provide accurate docking with the cart and compensate for the errors
         in the target pose reached through the local planner.
         '''
-        #if(data.data == True):
         success = True
         rospy.sleep(0.2)
         vel_msg = Twist()
-        #heading_tolerance = 0.5
         rospy.loginfo('Navigating to Secondary Goal')
         goal = self.calc_se_dock_position(distance)
         goal_x = goal[0]
@@ -144,7 +138,6 @@ class du_action_server:
                 self.du_server.set_preempted()
                 success = False
                 return success
-            #vel_msg.linear.x = (self.euclidean_distance(goal_x, goal_y))*self.se_move_p_gain
             vel_msg.linear.x = self.euclidean_distance(goal_x, goal_y)*self.kp_trans
             vel_msg.linear.y = 0
             vel_msg.linear.z = 0
@@ -158,8 +151,6 @@ class du_action_server:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('Secondary Docking Goal Reached')
-        #rospy.sleep(0.7)
-        #self.start_subscriber.unregister()
         r = rospy.Rate(10)
         while(abs(self.cart_theta - self.curr_theta) >= self.orientation_tolerance):
             if (self.du_server.is_preempt_requested()):
@@ -173,8 +164,6 @@ class du_action_server:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('Secondary Docking Goal Orientation Reached')
-        #else:
-        #    pass
         return success
 
     def do_du_move(self, distance):
@@ -201,10 +190,6 @@ class du_action_server:
             r.sleep()
         vel_msg.linear.x = 0
         self.vel_pub.publish(vel_msg)
-        #if ((self.odom_coor.position.x <= distance + self.dist_tolerance) and (self.odom_coor.position.x >= distance - self.dist_tolerance)):
-        #    success = True
-        #else:
-        #    success = False
         return success
 
     def do_du_elev(self, mode):
@@ -233,16 +218,12 @@ class du_action_server:
                 rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
                 move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
                 move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
-                #rospy.sleep(0.2)
             '''
             rospy.wait_for_service('/'+ROBOT_ID+'/set_elevator')
             move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/set_elevator', SetElevator)
             move_elevator(elev_act) # 1 --> raise elevator // -1 --> lower elevator
             rospy.sleep(6) # service returns immedietly, a wait time is needed
             '''
-            #execfile('src/fms_rob/scripts/elevator_test.py')
-            #elevator_test.do_elev_test()
-            #rospy.sleep(6)
             rospy.loginfo('Elevator Service call Successful')
             success = True
         except: 
@@ -256,11 +237,9 @@ class du_action_server:
         '''
         success = True
         angle_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, angle)
-        #print(angle_quat)
         vel_msg = Twist()
         rospy.loginfo('Rotating Cart')
         r = rospy.Rate(10)
-        #while not ((self.odom_coor.orientation.z <=  angle_quat[2] + self.ang_tolerance) and (self.odom_coor.orientation.z >=  angle_quat[2] - self.ang_tolerance)):
         while (abs(self.odom_coor.orientation.z) < angle_quat[2] - self.ang_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
@@ -329,7 +308,9 @@ class du_action_server:
         return sqrt(pow((goal_x - self.curr_pose_trans_x), 2) + pow((goal_y - self.curr_pose_trans_y), 2))
 
     def goal_angle(self, goal_x, goal_y):
-        '''Angle between current orientation and the heading of the next way point'''
+        '''
+        Angle between current orientation and the heading of the next way point
+        '''
         return atan2(goal_y - self.curr_pose_trans_y, goal_x - self.curr_pose_trans_x)
 
     def angular_vel(self, goal_x, goal_y):
@@ -340,7 +321,6 @@ class du_action_server:
         self.error_theta= self.goal_angle(goal_x, goal_y) - self.curr_theta
         self.error_theta= atan2(sin(self.error_theta),cos(self.error_theta))
         self.theta_msg = self.error_theta
-        #self.theta_pub.publish(self.theta_msg)
         self.current_time = current_time if current_time is not None else time.time()
         delta_time = self.current_time - self.last_time
         delta_error = self.error_theta - self.last_error_theta
