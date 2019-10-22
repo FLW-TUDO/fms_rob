@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 '''
 An action server to execute both the docking and undocking operations.
-The docking operation is composed of moving under cart, lifting the elevator, 
-then rotation the cart. Undocking is composed of lowering the elevator, rotating 
+The docking operation is composed of moving under cart (in 2 phases), lifting 
+the elevator, then rotation the cart. Undocking is composed of lowering the elevator, rotating 
 the robot under the cart, then moving out from under the cart. 
 Please note that the docking operation is executed after the robot has been 
 positioned in the picking location.
@@ -77,7 +77,7 @@ class du_action_server:
         '''Create dynamic reconfigure client client to obtain cart id'''
         reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update)
         rospy.sleep(1)
-        rospy.on_shutdown(self.shutdown_hook)
+        rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Dock-Undock Server Ready')
 
     def execute(self, goal):
@@ -85,16 +85,6 @@ class du_action_server:
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode
-        '''
-        if (rospy.has_param('/'+ROBOT_ID+'/fms_rob/cart_id')):
-            print(rospy.get_param('/'+ROBOT_ID+'/fms_rob/cart_id'))
-            self.cart_id = rospy.get_param('/'+ROBOT_ID+'/fms_rob/cart_id', 'klt01') # default cart: klt01
-            print(self.cart_id)
-            #self.klt_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose)
-            rospy.sleep(1)
-        else:
-            print('cart_id parameter has Not been set OR is empty!')
-        '''
         success_move = False
         success_se_move = False # secondary motion to adjust docking distance
         success_elev = False
@@ -120,6 +110,9 @@ class du_action_server:
             self.du_server.set_aborted(self.result)
 
     def reset_odom(self):
+        '''
+        Service call to reset odom for motion under cart
+        '''
         try:
             rospy.loginfo('Resetting Odom')
             rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
@@ -131,6 +124,11 @@ class du_action_server:
             rospy.logerr('Odom Reset Service call Failed!')
 
     def do_du_se_move(self, distance):
+        '''
+        Secondary motion before moving under cart using euclidean distance and a PD controller.
+        The aim is to provide accurate docking with the cart and compensate for the errors
+        in the target pose reached through the local planner.
+        '''
         #if(data.data == True):
         success = True
         rospy.sleep(0.2)
@@ -146,18 +144,6 @@ class du_action_server:
                 self.du_server.set_preempted()
                 success = False
                 return success
-            '''
-            while((abs(self.error_theta) > heading_tolerance)): 
-                # Linear velocity in the x-axis.
-                vel_msg.linear.x = 0
-                vel_msg.linear.y = 0
-                vel_msg.linear.z = 0
-                # Angular velocity in the z-axis.
-                vel_msg.angular.x = 0
-                vel_msg.angular.y = 0
-                vel_msg.angular.z = self.angular_vel()
-                self.vel_pub.publish(vel_msg)
-            '''
             #vel_msg.linear.x = (self.euclidean_distance(goal_x, goal_y))*self.se_move_p_gain
             vel_msg.linear.x = self.euclidean_distance(goal_x, goal_y)*self.kp_trans
             vel_msg.linear.y = 0
@@ -192,7 +178,11 @@ class du_action_server:
         return success
 
     def do_du_move(self, distance):
-        ''' Final motion under cart '''
+        ''' 
+        Final (primary) motion under cart.
+        Pleae note that motion under the cart is done blindly without the use of vicon or
+        on-robot sensors other than the odom.
+         '''
         success = True
         vel_msg = Twist()
         r = rospy.Rate(10)
@@ -218,6 +208,11 @@ class du_action_server:
         return success
 
     def do_du_elev(self, mode):
+        '''
+        Raising or lowering of the elevator. The vicon reference to the robot (i.e: robot id)
+        is changed to being that of the cart for further tracking of the robot using the 
+        ros_mocap packagewhile under the cart.
+        '''
         success = True
         if (self.du_server.is_preempt_requested()):
             self.du_server.set_preempted()
@@ -231,7 +226,7 @@ class du_action_server:
             self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
             rospy.loginfo('Moving Elevator')
             time_buffer = time.time()
-            while (time.time() - time_buffer <= 5.7): # temporary solution for elevator bug (on robot b)
+            while (time.time() - time_buffer <= 5.7): # solution for elevator bug (on robot b)
                 if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                     rospy.logwarn('Elevator motion interupted by joystick!')
                     break 
@@ -256,6 +251,9 @@ class du_action_server:
         return success
     
     def do_du_rotate(self, angle):
+        '''
+        Execution of robot rotation around its axis
+        '''
         success = True
         angle_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, angle)
         #print(angle_quat)
@@ -283,12 +281,18 @@ class du_action_server:
         self.odom_coor = data.pose.pose
 
     def calc_se_dock_position(self, se_distance):
-        '''calcuation of secondary docking position using the distance between the point calculated by the dock_pose_server and the cart position'''
+        '''
+        Calcuation of secondary docking position using the distance between the point calculated 
+        by the dock_pose_server and the cart position
+        '''
         goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2.0
         goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2.0
         return (goal_x, goal_y)
 
     def update_pose(self, data):
+        '''
+        Robot vicon pose update
+        '''
         self.curr_pose_trans_x = data.transform.translation.x
         self.curr_pose_trans_y = data.transform.translation.y
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
@@ -296,6 +300,9 @@ class du_action_server:
         self.curr_theta = rot_euler[2]
     
     def update_cart_pose(self, data):
+        '''
+        Cart pose update for usage during the secondary motion
+        '''
         self.cart_pose_x = data.transform.translation.x
         self.cart_pose_y = data.transform.translation.y
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
@@ -303,21 +310,32 @@ class du_action_server:
         self.cart_theta = rot_euler[2]
 
     def joy_update(self, data):
+        '''
+        Getting joystick data for use in case of interruption during elevator motion
+        '''
         self.joy_data = data
     
     def dynamic_params_update(self, config):
+        '''
+        Obtaining of cart id dynamically as set by the previous picking action
+        '''
         rospy.loginfo("Config set to {cart_id}".format(**config))
         self.cart_id = config['cart_id']
 
     def euclidean_distance(self, goal_x, goal_y):
-        """Euclidean distance between current pose and the next way point."""
+        '''
+        Euclidean distance between current pose and the next way point.
+        '''
         return sqrt(pow((goal_x - self.curr_pose_trans_x), 2) + pow((goal_y - self.curr_pose_trans_y), 2))
 
     def goal_angle(self, goal_x, goal_y):
-        """Angle between current orientation and the heading of the next way point"""
+        '''Angle between current orientation and the heading of the next way point'''
         return atan2(goal_y - self.curr_pose_trans_y, goal_x - self.curr_pose_trans_x)
 
     def angular_vel(self, goal_x, goal_y):
+        '''
+        PD controller angle output calculation
+        '''
         current_time = None
         self.error_theta= self.goal_angle(goal_x, goal_y) - self.curr_theta
         self.error_theta= atan2(sin(self.error_theta),cos(self.error_theta))
@@ -337,7 +355,7 @@ class du_action_server:
         return self.output
 
     def shutdown_hook(self):
-        self.klt_num_pub.publish('')
+        self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         rospy.logwarn('Dock Undock Server node shutdown by user')
     
 if __name__ == '__main__':
