@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-'''
+"""
 A client that requests the navigation of the robot to a station. The exact location
 for parking next to the station is specified by the bound mode sent by user (inbound
 - outbound - queue). It acts as a client to ROS's built in move base node, which is 
 an implementation of an action server. Please note that the status message architecture
 follows the Goal Status Array type specified in ROS actions by default.
-'''
+"""
 
 import rospy
 import actionlib
@@ -49,9 +49,7 @@ class place_action:
         rospy.loginfo('Ready for Placing')
 
     def place(self, data):
-        '''
-        Executes the placing operation
-        '''
+        """ Executes the placing operation. """
         self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         self.station_id = data.station_id
@@ -109,10 +107,10 @@ class place_action:
             return
 
     def calc_park_spots(self, station_id, park_distance):
-        '''
+        """
         Calls a service to Calculate the location of 3 parking spots next to the workstation
         (inbound - outbound - queue)
-        '''
+        """
         rospy.loginfo('Calculating Parking Spots')
         rospy.wait_for_service('/'+ROBOT_ID+'/get_parking_spots')
         try:
@@ -123,9 +121,7 @@ class place_action:
             rospy.logerr('Calculating Docking Position Service call Failed!')
 
     def status_update(self, data):
-        '''
-        Forwarding status messages upstream
-        '''
+        """ Forwarding status messages upstream. """
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()

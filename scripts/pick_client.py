@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-'''
+"""
 A client that requests the navigation of the robot to the picking position
 infront of the cart in preparation for the docking action. It acts as a client 
 to ROS's built in move base node,which is an implementation of an action server.
 Please note that the status message architecture follows the Goal Status Array
 type specified in ROS actions by default.
-'''
+"""
 
 import rospy
 import actionlib
@@ -52,9 +52,7 @@ class pick_action:
         rospy.loginfo('Ready for Picking')
 
     def pick(self, data):
-        '''
-        Executes picking action
-        '''
+        """ Executes picking action. """
         self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         self.cart_id = data.cart_id
@@ -98,9 +96,7 @@ class pick_action:
             return
 
     def calc_dock_position(self, cart_id):
-        '''
-        Calls a service to calculate the pick position infront of the desired cart 
-        '''
+        """ Calls a service to calculate the pick position infront of the desired cart. """
         rospy.loginfo('Calculating Docking Position')
         rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
@@ -111,9 +107,7 @@ class pick_action:
             rospy.logerr('Calculating Docking Position Service call Failed!')
 
     def status_update(self, data):
-        '''
-        Forwarding status messages upstream
-        '''
+        """ Forwarding status messages upstream. """
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()

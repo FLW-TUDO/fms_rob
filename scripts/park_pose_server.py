@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-'''
+"""
 Server for calculating parking positions around a workstation.
 Please note that the calculation of the station position is 
 reliant on the pose published from vicon.
-'''
+"""
 
 import rospy
 from geometry_msgs.msg import TransformStamped, PoseStamped
@@ -68,9 +68,7 @@ def get_parking_spots(req):
     return [goal_outbound_transformed, goal_inbound_transformed, goal_queue_in_vicon_world]
 
 def get_vicon_pose(data):
-    '''
-    Returns the location of the station in Vicon
-    '''
+    """ Returns the location of the station in Vicon. """
     global station_pose
     station_pose = data
 

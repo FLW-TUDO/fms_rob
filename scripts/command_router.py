@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-'''
-A node that distributes MQTT messages sent by the user to respective clients     
-'''
+
+""" A node that distributes MQTT messages sent by the user to respective clients. """
 
 import rospy
 from geometry_msgs.msg import Pose
@@ -23,9 +22,9 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-'''
+"""
 MQTT Settings
-'''
+"""
 broker_address= "gopher.phynetlab.com"
 port = 8883
 Connected = False  
@@ -68,9 +67,7 @@ class command_router:
         rospy.loginfo('Command Router Ready')
 
     def parse_data(self, client, userdata, message):
-        '''
-        Parses data sent by user via MQTT
-        '''
+        """ Parses data sent by user via MQTT. """
         mqtt_msg = json.loads(message.payload)
         goal = Pose()
         if (mqtt_msg['robot_id'] == ROBOT_ID):
@@ -97,14 +94,12 @@ class command_router:
         return
 
     def msg2json(self, msg):
-        '''Converts ROS messages into json format'''
+        """ Converts ROS messages into json format. """
         y = yaml.load(str(msg))
         return json.dumps(y,indent=4)
 
     def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp):
-        '''
-        Reroutes parsed actions sent from user to the interested (corresponding) clients
-        '''
+        """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
         if (action== 'drive'):
             print('Drive Action Selected')
             msg = RobActionSelect()
@@ -163,9 +158,7 @@ class command_router:
             pass
 
     def status_mapping_update(self, data):
-        '''
-        Publishes status messages back to user via MQTT
-        '''
+        """ Publishes status messages back to user via MQTT. """
         msg = MQTT_ack() # custom msg type that acts as container for ros messages pre-sending back to user
         msg.robotid = ROBOT_ID
         msg.cartid = data.cart_id
@@ -181,9 +174,7 @@ class command_router:
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
 
     def shutdown_hook(self):
-        '''
-        Shutdown callback function
-        '''
+        """ Shutdown callback function. """
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         rospy.logwarn('Command Router node shutdown by user')
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-'''
+"""
 An action server to execute both the docking and undocking operations.
 The docking operation is composed of moving under cart (in 2 phases), lifting 
 the elevator, then rotation the cart. Undocking is composed of lowering the elevator, rotating 
 the robot under the cart, then moving out from under the cart. 
 Please note that the docking operation is executed after the robot has been 
 positioned in the picking location.
-'''
+"""
 
 import rospy
 import actionlib
@@ -106,9 +106,7 @@ class du_action_server:
             self.du_server.set_aborted(self.result)
 
     def reset_odom(self):
-        '''
-        Service call to reset odom for motion under cart
-        '''
+        """ Service call to reset odom for motion under cart. """
         try:
             rospy.loginfo('Resetting Odom')
             rospy.wait_for_service('/'+ROBOT_ID+'/set_odometry')
@@ -120,11 +118,11 @@ class du_action_server:
             rospy.logerr('Odom Reset Service call Failed!')
 
     def do_du_se_move(self, distance):
-        '''
+        """
         Secondary motion before moving under cart using euclidean distance and a PD controller.
         The aim is to provide accurate docking with the cart and compensate for the errors
         in the target pose reached through the local planner.
-        '''
+        """
         success = True
         rospy.sleep(0.2)
         vel_msg = Twist()
@@ -167,11 +165,11 @@ class du_action_server:
         return success
 
     def do_du_move(self, distance):
-        ''' 
+        """ 
         Final (primary) motion under cart.
         Pleae note that motion under the cart is done blindly without the use of vicon or
         on-robot sensors other than the odom.
-         '''
+        """
         success = True
         vel_msg = Twist()
         r = rospy.Rate(10)
@@ -193,11 +191,11 @@ class du_action_server:
         return success
 
     def do_du_elev(self, mode):
-        '''
+        """
         Raising or lowering of the elevator. The vicon reference to the robot (i.e: robot id)
         is changed to being that of the cart for further tracking of the robot (through the 
         ros_mocap package) while under the cart.
-        '''
+        """
         success = True
         if (self.du_server.is_preempt_requested()):
             self.du_server.set_preempted()
@@ -226,9 +224,7 @@ class du_action_server:
         return success
     
     def do_du_rotate(self, angle):
-        '''
-        Execution of robot rotation around its axis
-        '''
+        """ Execution of robot rotation around its axis. """
         success = True
         angle_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, angle)
         vel_msg = Twist()
@@ -250,25 +246,21 @@ class du_action_server:
         return success
 
     def get_odom(self, data):
-        '''
-        Obtains current odom readings
-        '''
+        """ Obtains current odom readings. """
         self.odom_data = data   
         self.odom_coor = data.pose.pose
 
     def calc_se_dock_position(self, se_distance):
-        '''
+        """
         Calcuation of secondary docking position using the distance between the point calculated 
-        by the dock_pose_server and the cart position
-        '''
+        by the dock_pose_server and the cart position.
+        """
         goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2.0
         goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2.0
         return (goal_x, goal_y)
 
     def update_pose(self, data):
-        '''
-        Robot vicon pose update
-        '''
+        """ Robot vicon pose update. """
         self.curr_pose_trans_x = data.transform.translation.x
         self.curr_pose_trans_y = data.transform.translation.y
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
@@ -276,9 +268,7 @@ class du_action_server:
         self.curr_theta = rot_euler[2]
     
     def update_cart_pose(self, data):
-        '''
-        Cart pose update for usage during the secondary motion
-        '''
+        """ Cart pose update for usage during the secondary motion. """
         self.cart_pose_x = data.transform.translation.x
         self.cart_pose_y = data.transform.translation.y
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
@@ -286,34 +276,24 @@ class du_action_server:
         self.cart_theta = rot_euler[2]
 
     def joy_update(self, data):
-        '''
-        Getting joystick data for usage in case of interruption during elevator motion
-        '''
+        """ Getting joystick data for usage in case of interruption during elevator motion. """
         self.joy_data = data
     
     def dynamic_params_update(self, config):
-        '''
-        Obtaining of cart id dynamically as set by the previous picking action
-        '''
+        """ Obtaining of cart id dynamically as set by the previous picking action. """
         rospy.loginfo("Config set to {cart_id}".format(**config))
         self.cart_id = config['cart_id']
 
     def euclidean_distance(self, goal_x, goal_y):
-        '''
-        Euclidean distance between current pose and the next way point.
-        '''
+        """ Euclidean distance between current pose and the next way point."""
         return sqrt(pow((goal_x - self.curr_pose_trans_x), 2) + pow((goal_y - self.curr_pose_trans_y), 2))
 
     def goal_angle(self, goal_x, goal_y):
-        '''
-        Angle between current orientation and the heading of the next way point
-        '''
+        """ Angle between current orientation and the heading of the next way point. """
         return atan2(goal_y - self.curr_pose_trans_y, goal_x - self.curr_pose_trans_x)
 
     def angular_vel(self, goal_x, goal_y):
-        '''
-        PD controller output calculation
-        '''
+        """ PD controller output calculation. """
         current_time = None
         self.error_theta= self.goal_angle(goal_x, goal_y) - self.curr_theta
         self.error_theta= atan2(sin(self.error_theta),cos(self.error_theta))

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-'''
+"""
 A client that requests the navigation of the robot to a location specified 
 by the user in the MQTT msg
-'''
+"""
 
 import rospy
 import actionlib
@@ -39,9 +39,7 @@ class drive_action:
         rospy.loginfo('Ready for Driving')
 
     def drive(self, data):
-        '''
-        Executes the drive action
-        '''
+        """ Executes the drive action. """
         self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         if (data.action == 'drive'):
@@ -78,9 +76,7 @@ class drive_action:
             return
 
     def status_update(self, data):
-        '''
-        Forwarding status messages upstream
-        '''
+        """ Forwarding status messages upstream. """
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()

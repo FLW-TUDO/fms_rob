@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-'''
+"""
 A client to requests both docking and undocking operation. 
 Please note that the status message architecture follows the Goal Status Array 
 type specified in ROS actions by default.
-'''
+"""
 
 import rospy
 import actionlib
@@ -77,9 +77,7 @@ class du_action_client:
             return
 
     def status_update(self, data):
-        '''
-        Forwarding status messages upstream
-        '''
+        """ Forwarding status messages upstream. """
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.client.get_state()

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-'''
+"""
 Server for calculating offset position from cart for docking operation.
 Please note that the calculation of the cart position is reliant on 
 the pose published from vicon.
-'''
+"""
 
 import rospy
 from geometry_msgs.msg import TransformStamped, Pose
@@ -50,9 +50,7 @@ def get_docking_pose(req):
     return goal_result
 
 def get_vicon_pose(data):
-    '''
-    Returns the location of the cart in Vicon
-    '''
+    """ Returns the location of the cart in Vicon. """
     global goal
     goal = data
 
