@@ -78,7 +78,6 @@ class command_router:
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
             cancellation_stamp = mqtt_msg['cancellation_stamp']
-            follow_id = mqtt_msg['follow_id'] # id of robot to be followed - not used
             # pose translation
             goal.position.x = mqtt_msg['pose']['translation']['x']
             goal.position.y = mqtt_msg['pose']['translation']['y']
