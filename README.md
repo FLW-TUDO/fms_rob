@@ -3,40 +3,12 @@ A robot management API that handles the interface between the fleet management s
 
 ## **Architecture**
 ---
-```mermaid
-graph LR;
-  broker>MQTT Broker]-->router(Command Router);
-  router-->pick(Pick Client);
-  pick-->move(Move Base Server);
-  router-->place(Place Client);
-  router-->dock_cl(Dock Undock Client);
-  place-->move;
-  drive(Drive Client)-->move;
-  dock_se(Dock Undock Server)-->dock_cl;
-  pick-->dock_po(Dock Pose Server);
-  place-->park(Park Pose Server);
-  %% pick-->dynam(dynamic reconf server);
-  %% dynam-->dock_se;
-  subgraph Clients
-  pick
-  place
-  drive
-  dock_cl
-  end
-  subgraph ROS Service Servers
-  dock_po
-  park
-  end
-  subgraph ROS Action Servers
-  dock_se
-  move
-  end
 
-```
+![alt text](img/architecture.png "API Architecture")
 
 ## **Usage**
 ---
-To interface with the API, the user sends messages via MQTT in JSON format.
+To interface with the API, the user sends or receives messages via MQTT in JSON format.
 
 ### **MQTT Topics used:**
 For sending commands and receiving status info from the API.
@@ -123,7 +95,7 @@ uint8 status
 ### **Possible actions:**
 
 * **pick**: Navigates the robot to a calculated location infront of the requested cart
-* **dock**: Performs the actual docking operation with the cart, which consists of: 1) auxillary motion to correct pose error in the local planner, 2) motion under cart, 3) elevator raise, 4) 180<sup>o</sup> rotaion
+* **dock**: Performs the actual docking operation with the cart, which consists of: 1) auxillary motion to correct pose error by the local planner, 2) motion under cart, 3) elevator raise, 4) 180<sup>o</sup> rotaion
   
 * **undock**: Performs the undocking operation which consists of: 1) elevator drop, 2) 180<sup>o</sup> rotaion, 3) motion out from under cart
 * **place**: Places the cart near one of the stations in one of 3 locations (*bound mode*): *inbound*, *outbound*, or *queue*
