@@ -27,6 +27,7 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 station_pose = TransformStamped()
 
 def get_parking_spots(req):
+    """ Calculates the inbound, outbound, and queue poses with respect to a station. """
     global station_pose
     goal_inbound = PoseStamped()
     goal_outbound = PoseStamped()

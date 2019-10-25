@@ -42,6 +42,7 @@ class du_action_client:
         rospy.loginfo('Ready for Docking')
 
     def dock(self, data):
+        """ Executes the dock or undock action. """
         self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         goal = dockUndockGoal()

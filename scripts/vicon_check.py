@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+"""
+A node to detect disturbances in vicon readings - currently not complete.
+"""
+
 import rospy
 from std_msgs.msg import Bool
 from geometry_msgs.msg import TransformStamped
