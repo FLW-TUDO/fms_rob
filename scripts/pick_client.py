@@ -56,12 +56,12 @@ class pick_action:
 
     def pick(self, data):
         """ Executes picking action. """
-        if ((self.home_flag == True) or (self.undock_flag == True)):
-            self.command_id = data.command_id
-            self.action = data.action # to be removed after msg modification
-            self.cart_id = data.cart_id
-            self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
-            if (data.action == 'pick'):
+        self.command_id = data.command_id
+        self.action = data.action # to be removed after msg modification
+        self.cart_id = data.cart_id
+        self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
+        if (data.action == 'pick'):
+            if ((self.home_flag == True) or (self.undock_flag == True)):
                 dock_pose = self.calc_dock_position(self.cart_id)
                 rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))
                 if (dock_pose == None):
@@ -85,22 +85,22 @@ class pick_action:
                 self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
             else:
-                if (data.action == 'cancelCurrent'):
-                    self.act_client.cancel_goal()
-                    rospy.logwarn('Cancelling Current Goal')
-                if (data.action == 'cancelAll'):
-                    self.act_client.cancel_all_goals()
-                    rospy.logwarn('cancelling All Goals')
-                if (data.action == 'cancelAtAndBefore'):
-                    self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
-                    s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
-                    rospy.logwarn(s)
-                self.act_client.stop_tracking_goal()
-                self.status_flag = False
+                #self.act_client.cancel_goal()
+                rospy.logerr('Action Rejected! - Attempting to pick without undock or home')
                 return
         else:
-            #self.act_client.cancel_goal()
-            rospy.logerr('Action Rejected! - Attempting to pick without undock or home')
+            if (data.action == 'cancelCurrent'):
+                self.act_client.cancel_goal()
+                rospy.logwarn('Cancelling Current Goal')
+            if (data.action == 'cancelAll'):
+                self.act_client.cancel_all_goals()
+                rospy.logwarn('cancelling All Goals')
+            if (data.action == 'cancelAtAndBefore'):
+                self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
+                s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
+                rospy.logwarn(s)
+            self.act_client.stop_tracking_goal()
+            self.status_flag = False
             return
 
     def calc_dock_position(self, cart_id):
