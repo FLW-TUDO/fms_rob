@@ -99,8 +99,9 @@ class pick_action:
                 self.status_flag = False
                 return
         else:
-            self.act_client.cancel_goal()
-            rospy.logerr('Action Rejected! - Attempting to pick without being undocked')
+            #self.act_client.cancel_goal()
+            rospy.logerr('Action Rejected! - Attempting to pick without undock or home')
+            return
 
     def calc_dock_position(self, cart_id):
         """ Calls a service to calculate the pick position infront of the desired cart. """
