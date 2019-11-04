@@ -17,6 +17,7 @@ add_message_files(
 	FILES
   RobActionSelect.msg
   RobActionStatus.msg
+  MqttAck.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -43,6 +43,7 @@ class du_action_client:
         self.reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         self.pick_flag = Bool()
         self.return_flag = Bool()
+        rospy.sleep(1)
         rospy.loginfo('Ready for Docking')
 
     def dock(self, data):
@@ -51,7 +52,7 @@ class du_action_client:
         self.action = data.action # to be removed after msg modification
         goal = dockUndockGoal()
         if (data.action == 'dock'):
-            if(self.pick_flag == True):
+            if (self.pick_flag == True):
                 self.reconf_client.update_configuration({"pick": False})
                 rospy.loginfo('Sending Dock goal to action server') 
                 goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
@@ -63,7 +64,7 @@ class du_action_client:
             else:
                 rospy.logerr('Action Rejected! - Attempting to dock without pick')
                 return
-        elif(data.action == 'undock'):
+        elif (data.action == 'undock'):
             if(self.return_flag == True):
                 self.reconf_client.update_configuration({"return": False})
                 rospy.loginfo('Sending Undock goal to action server') 

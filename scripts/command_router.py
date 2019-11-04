@@ -7,8 +7,8 @@ from geometry_msgs.msg import Pose
 from std_msgs.msg import String
 import paho.mqtt.client as mqttClient
 import time, sys, json
-from robotnik_msgs.msg import MQTT_ack
-from fms_rob.msg import RobActionSelect, RobActionStatus
+#from robotnik_msgs.msg import MQTT_ack
+from fms_rob.msg import RobActionSelect, RobActionStatus, MqttAck
 import yaml
 
 
@@ -158,7 +158,7 @@ class command_router:
 
     def status_mapping_update(self, data):
         """ Publishes status messages back to user via MQTT. """
-        msg = MQTT_ack() # custom msg type that acts as container for ros messages pre-sending back to user
+        msg = MqttAck() # custom msg type that acts as container for ros messages pre-sending back to user
         msg.robotid = ROBOT_ID
         msg.cartid = data.cart_id
         msg.command = data.action

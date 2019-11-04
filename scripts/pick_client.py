@@ -56,7 +56,7 @@ class pick_action:
 
     def pick(self, data):
         """ Executes picking action. """
-        if((self.home_flag == True) or (self.undock_flag == True)):
+        if ((self.home_flag == True) or (self.undock_flag == True)):
             self.command_id = data.command_id
             self.action = data.action # to be removed after msg modification
             self.cart_id = data.cart_id

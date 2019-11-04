@@ -16,10 +16,11 @@ from fms_rob.msg import RobActionSelect, RobActionStatus
 from fms_rob.srv import  parkPose
 from robotnik_msgs.srv import set_odometry, set_digital_output
 from actionlib_msgs.msg import GoalStatusArray
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from math import cos, sin, pi
 import tf_conversions
 from std_srvs.srv import Empty
+import dynamic_reconfigure.client
 
 
 '''
@@ -46,6 +47,9 @@ class place_action:
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.park_distance = 1.06 # min: 1.02
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
+        self.reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.dock_flag = Bool()
+        rospy.sleep(1)
         rospy.loginfo('Ready for Placing')
 
     def place(self, data):
@@ -55,53 +59,61 @@ class place_action:
         self.station_id = data.station_id
         self.bound_mode = data.bound_mode
         if (data.action == 'place'):
-            parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
-            rospy.loginfo('Calculated parking spots for placing: {}'.format(parking_spots))
-            goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-            goal.target_pose.header.stamp = rospy.Time.now()
-            if (parking_spots == None):
-                rospy.logerr('Station Topic Not Found!')
+            if (self.dock_flag == True):
+                self.reconf_client.update_configuration({"dock": False})
+                parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
+                rospy.loginfo('Calculated parking spots for placing: {}'.format(parking_spots))
+                goal = MoveBaseGoal()
+                goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+                goal.target_pose.header.stamp = rospy.Time.now()
+                if (parking_spots == None):
+                    rospy.logerr('Station Topic Not Found!')
+                    return
+                if (self.bound_mode == 'inbound'):
+                    goal.target_pose.pose.position.x = parking_spots.inbound.pose.position.x
+                    goal.target_pose.pose.position.y = parking_spots.inbound.pose.position.y
+                    goal.target_pose.pose.orientation.x = parking_spots.inbound.pose.orientation.x
+                    goal.target_pose.pose.orientation.y = parking_spots.inbound.pose.orientation.y
+                    goal.target_pose.pose.orientation.z = parking_spots.inbound.pose.orientation.z
+                    goal.target_pose.pose.orientation.w = parking_spots.inbound.pose.orientation.w
+                if (self.bound_mode == 'outbound'):
+                    goal.target_pose.pose.position.x = parking_spots.outbound.pose.position.x
+                    goal.target_pose.pose.position.y = parking_spots.outbound.pose.position.y
+                    goal.target_pose.pose.orientation.x = parking_spots.outbound.pose.orientation.x
+                    goal.target_pose.pose.orientation.y = parking_spots.outbound.pose.orientation.y
+                    goal.target_pose.pose.orientation.z = parking_spots.outbound.pose.orientation.z
+                    goal.target_pose.pose.orientation.w = parking_spots.outbound.pose.orientation.w
+                if (self.bound_mode == 'queue'):
+                    goal.target_pose.pose.position.x = parking_spots.queue.pose.position.x
+                    goal.target_pose.pose.position.y = parking_spots.queue.pose.position.y
+                    goal.target_pose.pose.orientation.x = parking_spots.queue.pose.orientation.x
+                    goal.target_pose.pose.orientation.y = parking_spots.queue.pose.orientation.y
+                    goal.target_pose.pose.orientation.z = parking_spots.queue.pose.orientation.z
+                    goal.target_pose.pose.orientation.w = parking_spots.queue.pose.orientation.w
+                rospy.loginfo('Sending Place goal to action server') 
+                rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
+                reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
+                reset_costmaps()
+                #self.client.send_goal_and_wait(goal) # blocking
+                self.client.send_goal(goal) # non-blocking
+                self.status_flag = True
+            else:
+                rospy.logerr('Action Rejected! - Attempting to place without dock')
                 return
-            if (self.bound_mode == 'inbound'):
-                goal.target_pose.pose.position.x = parking_spots.inbound.pose.position.x
-                goal.target_pose.pose.position.y = parking_spots.inbound.pose.position.y
-                goal.target_pose.pose.orientation.x = parking_spots.inbound.pose.orientation.x
-                goal.target_pose.pose.orientation.y = parking_spots.inbound.pose.orientation.y
-                goal.target_pose.pose.orientation.z = parking_spots.inbound.pose.orientation.z
-                goal.target_pose.pose.orientation.w = parking_spots.inbound.pose.orientation.w
-            if (self.bound_mode == 'outbound'):
-                goal.target_pose.pose.position.x = parking_spots.outbound.pose.position.x
-                goal.target_pose.pose.position.y = parking_spots.outbound.pose.position.y
-                goal.target_pose.pose.orientation.x = parking_spots.outbound.pose.orientation.x
-                goal.target_pose.pose.orientation.y = parking_spots.outbound.pose.orientation.y
-                goal.target_pose.pose.orientation.z = parking_spots.outbound.pose.orientation.z
-                goal.target_pose.pose.orientation.w = parking_spots.outbound.pose.orientation.w
-            if (self.bound_mode == 'queue'):
-                goal.target_pose.pose.position.x = parking_spots.queue.pose.position.x
-                goal.target_pose.pose.position.y = parking_spots.queue.pose.position.y
-                goal.target_pose.pose.orientation.x = parking_spots.queue.pose.orientation.x
-                goal.target_pose.pose.orientation.y = parking_spots.queue.pose.orientation.y
-                goal.target_pose.pose.orientation.z = parking_spots.queue.pose.orientation.z
-                goal.target_pose.pose.orientation.w = parking_spots.queue.pose.orientation.w
-            rospy.loginfo('Sending Place goal to action server') 
-            rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
-            reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
-            reset_costmaps()
-            #self.client.send_goal_and_wait(goal) # blocking
-            self.client.send_goal(goal) # non-blocking
-            self.status_flag = True
         else:
             if (data.action == 'cancelCurrent'):
                 self.client.cancel_goal()
+                self.reconf_client.update_configuration({"dock": False})
                 rospy.logwarn('Cancelling Current Goal')
             if (data.action == 'cancelAll'):
                 self.client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
+                self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
+                self.reconf_client.update_configuration({"dock": False})
             self.client.stop_tracking_goal()
             self.status_flag = False
             return
@@ -119,6 +131,11 @@ class place_action:
             return resp
         except rospy.ServiceException:
             rospy.logerr('Calculating Docking Position Service call Failed!')
+    
+    def dynamic_params_update(self, config):
+        """ Dynamically Obtaining the interlock state. """
+        rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        self.dock_flag = config['dock']
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """
