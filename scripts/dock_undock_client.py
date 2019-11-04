@@ -80,13 +80,19 @@ class du_action_client:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
+                self.reconf_client.update_configuration({"pick": False})
+                self.reconf_client.update_configuration({"return": False})
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
+                self.reconf_client.update_configuration({"pick": False})
+                self.reconf_client.update_configuration({"return": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
+                self.reconf_client.update_configuration({"pick": False})
+                self.reconf_client.update_configuration({"return": False})
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
