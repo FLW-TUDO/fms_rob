@@ -50,7 +50,7 @@ class HomeAction:
         rospy.loginfo('Ready for Homing')
 
     def home(self, data):
-        """ Executes picking action. """
+        """ Executes homing action. """
         self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         self.home_pose = rospy.get_param('/robot_home/'+ROBOT_ID) # add default pose
@@ -131,7 +131,7 @@ class HomeAction:
     
 if __name__ == '__main__':
     try:
-        ha = HomeAction()
+        hac = HomeAction()
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')
