@@ -37,9 +37,9 @@ class PlaceAction:
     def __init__(self):
         rospy.init_node('place_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
-        self.client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
+        self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
         rospy.loginfo('Waiting for move_base server')
-        self.client.wait_for_server()  # wait for server start up
+        self.act_client.wait_for_server()  # wait for server start up
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
@@ -93,27 +93,27 @@ class PlaceAction:
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
                 reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
                 reset_costmaps()
-                #self.client.send_goal_and_wait(goal) # blocking
-                self.client.send_goal(goal) # non-blocking
+                #self.act_client.send_goal_and_wait(goal) # blocking
+                self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
             else:
                 rospy.logerr('Action Rejected! - Attempting to place without dock')
                 return
         else:
             if (data.action == 'cancelCurrent'):
-                self.client.cancel_goal()
+                self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
                 self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAll'):
-                self.client.cancel_all_goals()
+                self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
                 self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAtAndBefore'):
-                self.client.cancel_goals_at_and_before_time(data.cancellation_stamp)
+                self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
                 self.reconf_client.update_configuration({"dock": False})
-            self.client.stop_tracking_goal()
+            self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
 
@@ -140,10 +140,10 @@ class PlaceAction:
         """ Forwarding status messages upstream. """
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
-            status = self.client.get_state()
+            status = self.act_client.get_state()
             print(status)
             msg = RobActionStatus()
-            #self.client.stop_tracking_goal()
+            #self.act_client.stop_tracking_goal()
             msg.status = status
             msg.command_id = self.command_id # to be removed after msg modification
             msg.action = self.action # to be removed after msg modification
@@ -152,7 +152,7 @@ class PlaceAction:
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
                 self.reconf_client.update_configuration({"dock": False})
-                self.client.stop_tracking_goal()
+                self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return  
             if (status == 4): # if action execution is aborted
