@@ -37,9 +37,10 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-class du_action_server:
+class DUActionServer:
 
     def __init__(self):
+        rospy.init_node('dock_undock_server')
         self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         self.du_server.start()
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
@@ -317,8 +318,7 @@ class du_action_server:
     
 if __name__ == '__main__':
     try:
-        rospy.init_node('dock_undock_server')
-        du = du_action_server()
+        du = DUActionServer()
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')

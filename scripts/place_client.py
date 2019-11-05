@@ -33,7 +33,7 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-class place_action:
+class PlaceAction:
     def __init__(self):
         rospy.init_node('place_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
@@ -166,7 +166,7 @@ class place_action:
     
 if __name__ == '__main__':
     try:
-        pa = place_action()
+        pa = PlaceAction()
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')

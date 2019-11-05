@@ -32,7 +32,7 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-class pick_action:
+class PickAction:
     def __init__(self):
         rospy.init_node('pick_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
@@ -148,7 +148,7 @@ class pick_action:
     
 if __name__ == '__main__':
     try:
-        pa = pick_action()
+        pa = PickAction()
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')

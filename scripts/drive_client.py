@@ -25,7 +25,7 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-class drive_action:
+class DriveAction:
     def __init__(self):
         rospy.init_node('drive_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
@@ -98,7 +98,7 @@ class drive_action:
 
 if __name__ == '__main__':
     try:
-        da = drive_action()
+        da = DriveAction()
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')

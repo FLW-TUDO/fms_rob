@@ -28,9 +28,10 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-class du_action_client:
+class DUActionClient:
     
     def __init__(self):
+        rospy.init_node('dock_undock_client')
         self.status_flag = False # used to throttle further message sending after action execution
         self.act_client = actionlib.SimpleActionClient('do_dock_undock', dockUndockAction) 
         rospy.loginfo('Waiting for dock_undock_server')
@@ -131,8 +132,7 @@ class du_action_client:
 
 if __name__ == '__main__':
     try:
-        rospy.init_node('dock_client')
-        dc = du_action_client()    
+        dc = DUActionClient()    
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')

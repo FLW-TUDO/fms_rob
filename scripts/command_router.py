@@ -56,7 +56,7 @@ client.subscribe("/robotnik/#", 0) # Topics with wild card and a robotnik namesp
 #######################################################################################
 '''
 
-class command_router:
+class CommandRouter:
     def __init__(self):
         rospy.init_node('command_router')
         client.message_callback_add("/robotnik/mqtt_ros_command", self.parse_data) # commands received from user ex: pick, place, etc
@@ -197,7 +197,7 @@ class command_router:
 
 if __name__ == '__main__':
     try:
-        cr = command_router()
+        cr = CommandRouter()
     except KeyboardInterrupt:
         sys.exit()
         print('Interrupted!')

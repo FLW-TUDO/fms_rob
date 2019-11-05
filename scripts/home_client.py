@@ -30,7 +30,7 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id 
 #######################################################################################
 '''
 
-class home_action:
+class HomeAction:
     def __init__(self):
         rospy.init_node('home_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
@@ -131,7 +131,7 @@ class home_action:
     
 if __name__ == '__main__':
     try:
-        ha = home_action()
+        ha = HomeAction()
     except KeyboardInterrupt:
         sys.exit()
         rospy.logerr('Interrupted!')
