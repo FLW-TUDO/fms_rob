@@ -100,28 +100,28 @@ class command_router:
     def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
         if (action== 'drive'):
-            print('Drive Action Selected')
+            rospy.loginfo('Drive Action Selected')
             msg = RobActionSelect()
             msg.action = 'drive'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'dock'): 
-            print('Dock Action Selected')
+            rospy.loginfo('Dock Action Selected')
             msg = RobActionSelect()
             msg.action = 'dock'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'undock'):
-            print('Undock Action Selected')
+            rospy.loginfo('Undock Action Selected')
             msg = RobActionSelect()
             msg.action = 'undock'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'pick'):
-            print('Pick Action Selected')
+            rospy.loginfo('Pick Action Selected')
             msg = RobActionSelect()
             msg.action = 'pick'
             msg.goal = goal
@@ -129,7 +129,7 @@ class command_router:
             msg.cart_id = cart_id
             self.action_pub.publish(msg)
         if (action== 'place'):
-            print('Place Action Selected')
+            rospy.loginfo('Place Action Selected')
             msg = RobActionSelect()
             msg.action = 'place'
             msg.goal = goal
@@ -137,17 +137,34 @@ class command_router:
             msg.station_id = station_id
             msg.bound_mode = bound_mode # inbound, outbound, queue
             self.action_pub.publish(msg)
+        if (action== 'home'):
+            rospy.loginfo('Home Action Selected')
+            msg = RobActionSelect()
+            msg.action = 'home'
+            msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
+        if (action== 'return'):
+            rospy.loginfo('Return Action Selected')
+            msg = RobActionSelect()
+            msg.action = 'return'
+            msg.goal = goal
+            msg.command_id = command_id
+            self.action_pub.publish(msg)
         elif (action == 'cancelCurrent'): # cancel current active goal
+            rospy.loginfo('cancelCurrent Action Selected')
             msg = RobActionSelect()
             msg.action = 'cancelCurrent'
             msg.command_id = command_id
             self.action_pub.publish(msg)
         elif (action == 'cancelAll'): # cancel all goals
+            rospy.loginfo('cancelAll Action Selected')
             msg = RobActionSelect()
             msg.action = 'cancelAll'
             msg.command_id = command_id
             self.action_pub.publish(msg)
         elif (action == 'cancelAtAndBefore'): # cancel goals at and before a certain timestamp
+            rospy.loginfo('cancelAtAndBefore Action Selected')
             msg = RobActionSelect()
             msg.action = 'cancelAtAndBefore'
             msg.command_id = command_id
@@ -169,7 +186,7 @@ class command_router:
             msg.response = 'moving'
         else: msg.response = 'free'
         msg_json = self.msg2json(msg)
-        print('sending status data via mqtt')
+        rospy.loginfo('sending status data via mqtt')
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
 
     def shutdown_hook(self):
