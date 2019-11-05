@@ -53,7 +53,6 @@ class du_action_client:
         goal = dockUndockGoal()
         if (data.action == 'dock'):
             if (self.pick_flag == True):
-                self.reconf_client.update_configuration({"pick": False})
                 rospy.loginfo('Sending Dock goal to action server') 
                 goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
                 goal.angle = pi
@@ -117,13 +116,14 @@ class du_action_client:
             msg.action = self.action # to be removed after msg modification
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful
+                self.reconf_client.update_configuration({"pick": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logerr('Execution Aborted by Server!')
+                rospy.logerr('Execution Aborted by Dock-Undock Server!')
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package

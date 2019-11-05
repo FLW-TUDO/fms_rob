@@ -84,16 +84,16 @@ class home_action:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
-                self.reconf_client.update_configuration({"undock": False})
+                ###self.reconf_client.update_configuration({"undock": False})
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
-                self.reconf_client.update_configuration({"undock": False})
+                ###self.reconf_client.update_configuration({"undock": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-                self.reconf_client.update_configuration({"undock": False})
+                ###self.reconf_client.update_configuration({"undock": False})
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
@@ -120,10 +120,14 @@ class home_action:
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
+            if (status == 4): # if action execution is aborted
+                self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logerr('Execution Aborted by Move Base Server!')
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
-        rospy.logwarn('Pick Client node shutdown by user')
+        rospy.logwarn('Home Client node shutdown by user')
     
 if __name__ == '__main__':
     try:

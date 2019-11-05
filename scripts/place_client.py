@@ -60,7 +60,6 @@ class place_action:
         self.bound_mode = data.bound_mode
         if (data.action == 'place'):
             if (self.dock_flag == True):
-                self.reconf_client.update_configuration({"dock": False})
                 parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
                 rospy.loginfo('Calculated parking spots for placing: {}'.format(parking_spots))
                 goal = MoveBaseGoal()
@@ -103,8 +102,8 @@ class place_action:
         else:
             if (data.action == 'cancelCurrent'):
                 self.client.cancel_goal()
-                self.reconf_client.update_configuration({"dock": False})
                 rospy.logwarn('Cancelling Current Goal')
+                self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAll'):
                 self.client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
@@ -152,9 +151,14 @@ class place_action:
             msg.bound_mode = self.bound_mode
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
+                self.reconf_client.update_configuration({"dock": False})
                 self.client.stop_tracking_goal()
                 self.status_flag = False
-                return                 
+                return  
+            if (status == 4): # if action execution is aborted
+                self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logerr('Execution Aborted by Move Base Server!')               
 
     def shutdown_hook(self):
         self.klt_num_pub.publish('')  # resets the picked up cart number in the ros_mocap package

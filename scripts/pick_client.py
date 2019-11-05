@@ -16,7 +16,7 @@ from fms_rob.msg import RobActionSelect, RobActionStatus
 from fms_rob.srv import  dockPose
 from actionlib_msgs.msg import GoalStatusArray
 from std_msgs.msg import String
-from math import cos, sin, pi
+from math import pi
 from std_srvs.srv import Empty
 import time
 import dynamic_reconfigure.client
@@ -137,6 +137,10 @@ class pick_action:
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
+            if (status == 4): # if action execution is aborted
+                self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logerr('Execution Aborted by Move Base Server!')
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
