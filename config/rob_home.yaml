@@ -1,0 +1,76 @@
+
+robot_home: 
+    {
+        rb1_base_a: {
+            trans_x: -5.0, 
+            trans_y: -3.66, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 0, 
+            rot_w: 1
+            },
+        rb1_base_b: {
+            trans_x: -5.0, 
+            trans_y: -2.66, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 0, 
+            rot_w: 1
+            },
+        rb1_base_c: {
+            trans_x: 8.4, 
+            trans_y: -0.5, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 1, 
+            rot_w: 0
+            },
+        rb1_base_d: {
+            trans_x: 8.4, 
+            trans_y: 0.5, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 1, 
+            rot_w: 0
+            },
+        rb1_base_x: {
+            trans_x: -5.0, 
+            trans_y: -1.66, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 0, 
+            rot_w: 1
+            },
+        rb1_base_y: {
+            trans_x: -5.0, 
+            trans_y: -0.66, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 0, 
+            rot_w: 1
+            },
+        rb1_base_z: {
+            trans_x: 8.4, #-5.0 
+            trans_y: 0.34, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 0, 
+            rot_w: 1
+            },
+        rb1_base_w: {
+            trans_x: 8.4, 
+            trans_y: 1.5, 
+            trans_z: 0, 
+            rot_x: 0, 
+            rot_y: 0, 
+            rot_z: 1, 
+            rot_w: 0
+            }
+        }

@@ -3,6 +3,7 @@
 
 	<arg name="id_robot" default="rb1_base_b"/>
 	<param name="ROBOT_ID" type="str" value="$(arg id_robot)"/>
+    <rosparam command = "load" file="$(find fms_rob)/config/rob_home.yaml"/> 
 
 	<group ns="$(arg id_robot)">
 		<node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
