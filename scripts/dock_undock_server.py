@@ -72,7 +72,7 @@ class DUActionServer:
         self.start_msg = Bool()
         self.theta_msg = Float32()
         '''Create dynamic reconfigure client client to obtain cart id'''
-        reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Dock-Undock Server Ready')
@@ -92,6 +92,7 @@ class DUActionServer:
             rospy.sleep(0.2) # wait for complete halt of robot
             self.reset_odom()
             success_move = self.do_du_move(dock_distance/2.0) # move under cart
+            self.save_cart_pose() 
             success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
         else:
@@ -246,6 +247,15 @@ class DUActionServer:
         rospy.loginfo('Rotation Successful')
         return success
 
+    def save_cart_pose(self):
+        """ Saves cart port to enable returning it later during the return action. """
+        self.reconf_client.update_configuration({"return_pose_trans_x": self.cart_pose_trans[0]})
+        self.reconf_client.update_configuration({"return_pose_trans_y": self.cart_pose_trans[1]})  
+        self.reconf_client.update_configuration({"return_pose_rot_x": self.cart_pose_rot[0]})  
+        self.reconf_client.update_configuration({"return_pose_rot_y": self.cart_pose_rot[1]})  
+        self.reconf_client.update_configuration({"return_pose_rot_z": self.cart_pose_rot[2]})  
+        self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})     
+
     def get_odom(self, data):
         """ Obtains current odom readings. """
         self.odom_data = data   
@@ -256,8 +266,10 @@ class DUActionServer:
         Calcuation of secondary docking position using the distance between the point calculated 
         by the dock_pose_server and the cart position.
         """
-        goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2.0
-        goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2.0
+        #goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2.0
+        #goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2.0
+        goal_x = self.curr_pose_trans_x + (self.cart_pose_trans[0] - self.curr_pose_trans_x)/2.0
+        goal_y = self.curr_pose_trans_y + (self.cart_pose_trans[1] - self.curr_pose_trans_y)/2.0
         return (goal_x, goal_y)
 
     def update_pose(self, data):
@@ -270,10 +282,11 @@ class DUActionServer:
     
     def update_cart_pose(self, data):
         """ Cart pose update for usage during the secondary motion. """
-        self.cart_pose_x = data.transform.translation.x
-        self.cart_pose_y = data.transform.translation.y
-        rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
-        rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
+        self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
+        #self.cart_pose_x = data.transform.translation.x
+        #self.cart_pose_y = data.transform.translation.y
+        self.cart_pose_rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+        rot_euler = tf_conversions.transformations.euler_from_quaternion(self.cart_pose_rot)
         self.cart_theta = rot_euler[2]
 
     def joy_update(self, data):
