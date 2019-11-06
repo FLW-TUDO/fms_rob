@@ -47,7 +47,7 @@ class PlaceAction:
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.park_distance = 1.06 # min: 1.02
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         self.dock_flag = Bool()
         rospy.sleep(1)
         rospy.loginfo('Ready for Placing')

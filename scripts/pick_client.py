@@ -47,7 +47,7 @@ class PickAction:
         self.dock_distance = 1.0 # min: 1.0
         rospy.set_param(ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
-        self.reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         self.home_flag = True
         self.undock_flag = True

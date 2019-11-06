@@ -72,7 +72,7 @@ class DUActionServer:
         self.start_msg = Bool()
         self.theta_msg = Float32()
         '''Create dynamic reconfigure client client to obtain cart id'''
-        self.reconf_client = dynamic_reconfigure.client.Client("fms_rob", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Dock-Undock Server Ready')
