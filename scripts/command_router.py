@@ -186,7 +186,7 @@ class CommandRouter:
             msg.response = 'moving'
         else: msg.response = 'free'
         msg_json = self.msg2json(msg)
-        rospy.loginfo('sending status data via mqtt')
+        rospy.loginfo_throttle(2, 'sending status data via mqtt')
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
 
     def shutdown_hook(self):

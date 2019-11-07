@@ -10,7 +10,8 @@ from dynamic_reconfigure.server import Server
 from fms_rob.cfg import dynamic_paramsConfig
 
 def callback(config, level): # callback called when a parameter is updated
-    rospy.loginfo('''Reconfigure Request: {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}'''.format(**config))
+    rospy.loginfo('''Reconfigure Request: {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}, {return_pose_trans_x}, \
+        {return_pose_trans_y}, {return_pose_rot_x}, {return_pose_rot_y}, {return_pose_rot_z}, {return_pose_rot_w} '''.format(**config))
     return config
 
 def shutdown_hook():

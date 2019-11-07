@@ -43,11 +43,12 @@ class PickAction:
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+        self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10)
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.dock_distance = 1.0 # min: 1.0
         rospy.set_param(ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         self.home_flag = True
         self.undock_flag = True
@@ -59,7 +60,8 @@ class PickAction:
         self.command_id = data.command_id
         self.action = data.action # to be removed after msg modification
         self.cart_id = data.cart_id
-        self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
+        #self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
+        self.cart_id_pub.publish(self.cart_id)
         if (data.action == 'pick'):
             if ((self.home_flag == True) or (self.undock_flag == True)):
                 dock_pose = self.calc_dock_position(self.cart_id)
@@ -113,12 +115,14 @@ class PickAction:
             return resp.dock_pose
         except rospy.ServiceException:
             rospy.logerr('Calculating Docking Position Service call Failed!')
-    
+
+    '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
-        rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.home_flag = config['home']
         self.undock_flag = config['undock']
+    '''
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """

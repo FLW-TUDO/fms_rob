@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="id_robot" default="rb1_base_b"/>
+	<param name="ROBOT_ID" type="str" value="$(arg id_robot)"/>
+
+	<group ns="$(arg id_robot)">
+		<node pkg="fms_rob" name="test" type="test.py" output="screen"/>			
+	</group>
+	
+</launch>

@@ -41,9 +41,11 @@ class DUActionClient:
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
-        self.pick_flag = Bool()
-        self.return_flag = Bool()
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+        #self.pick_flag = Bool()
+        #self.return_flag = Bool()
+        self.pick_flag = True
+        self.return_flag = True
         rospy.sleep(1)
         rospy.loginfo('Ready for Docking')
 
@@ -56,17 +58,19 @@ class DUActionClient:
             if (self.pick_flag == True):
                 rospy.loginfo('Sending Dock goal to action server') 
                 goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
+                print('dock distance param obtained')
                 goal.angle = pi
                 goal.mode = True # True --> Dock // False --> Undock
                 #self.act_client.send_goal_and_wait(goal) # blocking
                 self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
+                rospy.loginfo('Goal sent to Dock action server') ###             
             else:
                 rospy.logerr('Action Rejected! - Attempting to dock without pick')
                 return
         elif (data.action == 'undock'):
             if(self.return_flag == True):
-                self.reconf_client.update_configuration({"return": False})
+                #self.reconf_client.update_configuration({"return": False})
                 rospy.loginfo('Sending Undock goal to action server') 
                 goal.distance = 0.5 # fixed distance when robot moves out from under cart
                 goal.angle = pi
@@ -81,28 +85,30 @@ class DUActionClient:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
-                self.reconf_client.update_configuration({"pick": False})
-                self.reconf_client.update_configuration({"return": False})
+                #self.reconf_client.update_configuration({"pick": False})
+                #self.reconf_client.update_configuration({"return": False})
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
-                self.reconf_client.update_configuration({"pick": False})
-                self.reconf_client.update_configuration({"return": False})
+                #self.reconf_client.update_configuration({"pick": False})
+                #self.reconf_client.update_configuration({"return": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-                self.reconf_client.update_configuration({"pick": False})
-                self.reconf_client.update_configuration({"return": False})
+                #self.reconf_client.update_configuration({"pick": False})
+                #self.reconf_client.update_configuration({"return": False})
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
-
+    '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
-        rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.pick_flag = config['pick']
         self.return_flag = config['return']
+        rospy.loginfo('Parameters updated by dock client') ###
+    '''
         
     def status_update(self, data):
         """ Forwarding status messages upstream. """
@@ -116,8 +122,9 @@ class DUActionClient:
             msg.command_id = self.command_id
             msg.action = self.action # to be removed after msg modification
             self.action_status_pub.publish(msg)
+            rospy.loginfo('Dock client sent status updates') ###
             if (status == 3): # if action execution is successful
-                self.reconf_client.update_configuration({"pick": False})
+                #self.reconf_client.update_configuration({"pick": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return

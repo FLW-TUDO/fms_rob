@@ -100,7 +100,7 @@ class HomeAction:
     
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
-        rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.undock_flag = config['undock']
 
     def status_update(self, data):
@@ -117,6 +117,7 @@ class HomeAction:
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
                 ###self.reconf_client.update_configuration({"undock": False})
+                self.reconf_client.update_configuration({"pick": True})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return

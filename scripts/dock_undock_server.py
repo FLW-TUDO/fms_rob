@@ -43,9 +43,12 @@ class DUActionServer:
         rospy.init_node('dock_undock_server')
         self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         self.du_server.start()
+        '''Create dynamic reconfigure client to obtain cart id'''
+        #self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id)
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         self.move_speed = 0.2
@@ -71,14 +74,12 @@ class DUActionServer:
         self.output = 0.0
         self.start_msg = Bool()
         self.theta_msg = Float32()
-        '''Create dynamic reconfigure client client to obtain cart id'''
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Dock-Undock Server Ready')
 
     def execute(self, goal):
-        self.klt_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose)
+        cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose)
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode # docking or undocking
@@ -92,7 +93,7 @@ class DUActionServer:
             rospy.sleep(0.2) # wait for complete halt of robot
             self.reset_odom()
             success_move = self.do_du_move(dock_distance/2.0) # move under cart
-            self.save_cart_pose() 
+            #self.save_cart_pose() 
             success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
         else:
@@ -152,12 +153,12 @@ class DUActionServer:
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('Secondary Docking Goal Reached')
         r = rospy.Rate(10)
-        while(abs(self.cart_theta - self.curr_theta) >= self.orientation_tolerance):
+        while(abs(self.calc_cart_theta() - self.curr_theta) >= self.orientation_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
                 success = False
                 return success
-            vel_msg.angular.z = (self.cart_theta - self.curr_theta)*self.kp_orient
+            vel_msg.angular.z = (self.calc_cart_theta() - self.curr_theta)*self.kp_orient
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
@@ -246,15 +247,17 @@ class DUActionServer:
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('Rotation Successful')
         return success
-
+    
+    '''
     def save_cart_pose(self):
-        """ Saves cart port to enable returning it later during the return action. """
+        """ Saves cart pose to enable returning it later during the return action. """
         self.reconf_client.update_configuration({"return_pose_trans_x": self.cart_pose_trans[0]})
         self.reconf_client.update_configuration({"return_pose_trans_y": self.cart_pose_trans[1]})  
         self.reconf_client.update_configuration({"return_pose_rot_x": self.cart_pose_rot[0]})  
         self.reconf_client.update_configuration({"return_pose_rot_y": self.cart_pose_rot[1]})  
         self.reconf_client.update_configuration({"return_pose_rot_z": self.cart_pose_rot[2]})  
         self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})     
+    '''
 
     def get_odom(self, data):
         """ Obtains current odom readings. """
@@ -280,6 +283,10 @@ class DUActionServer:
         rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
         self.curr_theta = rot_euler[2]
     
+    def update_cart_id(self, data):
+        self.cart_id = data.data
+    
+    '''
     def update_cart_pose(self, data):
         """ Cart pose update for usage during the secondary motion. """
         self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
@@ -288,15 +295,31 @@ class DUActionServer:
         self.cart_pose_rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         rot_euler = tf_conversions.transformations.euler_from_quaternion(self.cart_pose_rot)
         self.cart_theta = rot_euler[2]
+    '''
+
+    def get_cart_pose(self, data):
+        #rospy.loginfo_throttle(1, 'getting cart pose')
+        self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
+        self.cart_pose_rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+    
+    def calc_cart_theta(self):
+        self.cart_pose_rot
+        rot_euler = tf_conversions.transformations.euler_from_quaternion(self.cart_pose_rot)
+        cart_theta = rot_euler[2]
+        return cart_theta
 
     def joy_update(self, data):
         """ Getting joystick data for usage in case of interruption during elevator motion. """
         self.joy_data = data
-    
+
+    '''
     def dynamic_params_update(self, config):
         """ Obtaining of cart id dynamically as set by the previous picking action. """
-        rospy.loginfo("Config set to {cart_id}".format(**config))
-        self.cart_id = config['cart_id']
+        #rospy.loginfo("Config set to {cart_id}".format(**config))
+        rospy.loginfo('Dock server updating parameters') ###
+        #self.cart_id = config['cart_id']
+        print('Cart id obtained by dock server is: {}'.format(self.cart_id))
+    '''
 
     def euclidean_distance(self, goal_x, goal_y):
         """ Euclidean distance between current pose and the next way point."""
