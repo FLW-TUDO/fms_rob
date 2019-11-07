@@ -135,7 +135,7 @@ class PlaceAction:
     '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
-        #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        #rospy.loginfo("Config set to {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.dock_flag = config['dock']
     '''
 

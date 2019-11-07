@@ -320,10 +320,9 @@ class DUActionServer:
     '''
     def dynamic_params_update(self, config):
         """ Obtaining of cart id dynamically as set by the previous picking action. """
-        #rospy.loginfo("Config set to {cart_id}".format(**config))
         rospy.loginfo('Dock server updating parameters') ###
         #self.cart_id = config['cart_id']
-        print('Cart id obtained by dock server is: {}'.format(self.cart_id))
+        #print('Cart id obtained by dock server is: {}'.format(self.cart_id))
     '''
 
     def euclidean_distance(self, goal_x, goal_y):

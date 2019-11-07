@@ -108,7 +108,7 @@ class ReturnAction:
     '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
-        #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        #rospy.loginfo("Config set to {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.place_flag = config['home']
         self.dock_flag = config['undock']
         self.return_pose = {'trans_x': config['return_pose_trans_x'], 'trans_y': config['return_pose_trans_y'], \

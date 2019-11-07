@@ -104,7 +104,7 @@ class DUActionClient:
     '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
-        #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
+        #rospy.loginfo("Config set to {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.pick_flag = config['pick']
         self.return_flag = config['return']
         rospy.loginfo('Parameters updated by dock client') ###
