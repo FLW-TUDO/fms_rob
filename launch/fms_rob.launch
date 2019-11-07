@@ -12,8 +12,8 @@
         <node pkg="fms_rob" name="dock_undock_client" type="dock_undock_client.py" output="screen"/>	
         <node pkg="fms_rob" name="drive_client" type="drive_client.py" output="screen"/>	
         <node pkg="fms_rob" name="pick_client" type="pick_client.py" output="screen"/>	
-        <!--node pkg="fms_rob" name="place_client" type="place_client.py" output="screen"/>
-        <node pkg="fms_rob" name="home_client" type="home_client.py" output="screen"/>	
+        <node pkg="fms_rob" name="place_client" type="place_client.py" output="screen"/>
+        <!--node pkg="fms_rob" name="home_client" type="home_client.py" output="screen"/>	
         <node pkg="fms_rob" name="return_client" type="return_client.py" output="screen"/-->		
         <node pkg="fms_rob" name="park_pose_server" type="park_pose_server.py" output="screen"/>
         <node pkg="fms_rob" name="dynamic_reconf_server" type="dynamic_reconf_server.py" output="screen"/>		

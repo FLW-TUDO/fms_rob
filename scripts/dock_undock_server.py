@@ -51,8 +51,8 @@ class DUActionServer:
         self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
-        self.move_speed = 0.2
-        self.rot_speed = 0.7
+        self.move_speed = 0.14
+        self.rot_speed = 0.5
         self.ang_tolerance = 0.002
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
@@ -60,7 +60,7 @@ class DUActionServer:
         self.error_theta = 1.0
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
-        self.kp_orient = 0.5
+        self.kp_orient = 0.3
         self.kp_trans = 0.8
         self.distance_tolerance = 0.005
         self.orientation_tolerance = 0.01
@@ -101,7 +101,7 @@ class DUActionServer:
             self.reset_odom()
             success_rotate = self.do_du_rotate(dock_angle) 
             success_move = self.do_du_move(dock_distance)
-            self.klt_num_pub.publish('')
+            self.klt_num_pub.publish('') # reset robot vicon location for ros_mocap package
         if (success_move and success_elev and success_rotate):
             self.result.res = True
             self.du_server.set_succeeded(self.result)
@@ -152,14 +152,18 @@ class DUActionServer:
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
-        rospy.loginfo('Secondary Docking Goal Reached')
+        rospy.loginfo('Secondary Docking Goal Position Reached')
         r = rospy.Rate(10)
         while(abs(self.calc_cart_theta() - self.curr_theta) >= self.orientation_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
                 success = False
                 return success
-            vel_msg.angular.z = (self.calc_cart_theta() - self.curr_theta)*self.kp_orient
+            cart_theta = self.calc_cart_theta()
+            robot_theta = self.curr_theta
+            vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
+            print('Cart theta is: {}'.format(cart_theta))
+            print('Robot theta is: {}'.format(robot_theta))
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
@@ -305,7 +309,6 @@ class DUActionServer:
         self.cart_pose_rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
     
     def calc_cart_theta(self):
-        self.cart_pose_rot
         rot_euler = tf_conversions.transformations.euler_from_quaternion(self.cart_pose_rot)
         cart_theta = rot_euler[2]
         return cart_theta

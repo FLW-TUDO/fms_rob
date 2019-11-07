@@ -56,15 +56,12 @@ class DUActionClient:
             self.action = data.action # to be removed after msg modification
             goal = dockUndockGoal()
             if (self.pick_flag == True):
-                rospy.loginfo('Sending Dock goal to action server') 
                 goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
-                print('dock distance param obtained')
                 goal.angle = pi
                 goal.mode = True # True --> Dock // False --> Undock
                 #self.act_client.send_goal_and_wait(goal) # blocking
                 self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
-                rospy.loginfo('Goal sent to Dock action server') ###             
             else:
                 rospy.logerr('Action Rejected! - Attempting to dock without pick')
                 return
@@ -125,7 +122,6 @@ class DUActionClient:
             msg.command_id = self.command_id
             msg.action = self.action # to be removed after msg modification
             self.action_status_pub.publish(msg)
-            rospy.loginfo('Dock client sent status updates') ###
             if (status == 3): # if action execution is successful
                 #self.reconf_client.update_configuration({"pick": False})
                 self.act_client.stop_tracking_goal()
