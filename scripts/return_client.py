@@ -43,7 +43,7 @@ class ReturnAction:
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         self.place_flag = True
         self.dock_flag = True
@@ -64,12 +64,20 @@ class ReturnAction:
                 goal = MoveBaseGoal()
                 goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
                 goal.target_pose.header.stamp = rospy.Time.now()
+                '''
                 goal.target_pose.pose.position.x = self.return_pose['trans_x']
                 goal.target_pose.pose.position.y = self.return_pose['trans_y']
                 goal.target_pose.pose.orientation.x = self.return_pose['rot_x']
                 goal.target_pose.pose.orientation.y = self.return_pose['rot_y']
                 goal.target_pose.pose.orientation.z = self.return_pose['rot_z']
                 goal.target_pose.pose.orientation.w = self.return_pose['rot_w']
+                '''
+                goal.target_pose.pose.position.x = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_trans_x')
+                goal.target_pose.pose.position.y = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_trans_y')
+                goal.target_pose.pose.orientation.x = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_x')
+                goal.target_pose.pose.orientation.y = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_y')
+                goal.target_pose.pose.orientation.z = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_z')
+                goal.target_pose.pose.orientation.w = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_w')
                 rospy.loginfo('Sending Return goal to action server') 
                 rospy.loginfo('Return goal coordinates: {}'.format(goal))
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
@@ -97,6 +105,7 @@ class ReturnAction:
             self.status_flag = False
             return
 
+    '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
         #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
@@ -105,6 +114,7 @@ class ReturnAction:
         self.return_pose = {'trans_x': config['return_pose_trans_x'], 'trans_y': config['return_pose_trans_y'], \
             'rot_x': config['return_pose_rot_x'], 'rot_y': config['return_pose_rot_y'], \
             'rot_z': config['return_pose_rot_z'], 'rot_w': config['return_pose_rot_w']}
+    '''
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """
@@ -117,7 +127,7 @@ class ReturnAction:
             msg.status = status
             msg.command_id = self.command_id
             msg.action = self.action # to be removed after msg modification
-            msg.cart_id = self.cart_id
+            #msg.cart_id = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
                 self.act_client.stop_tracking_goal()

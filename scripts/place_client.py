@@ -45,20 +45,21 @@ class PlaceAction:
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
-        self.park_distance = 1.06 # min: 1.02
+        self.park_distance = 1.1 # min: 1.02
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        #self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         self.dock_flag = Bool()
+        self.dock_flag = True
         rospy.sleep(1)
         rospy.loginfo('Ready for Placing')
 
     def place(self, data):
         """ Executes the placing operation. """
-        self.command_id = data.command_id
-        self.action = data.action # to be removed after msg modification
-        self.station_id = data.station_id
-        self.bound_mode = data.bound_mode
         if (data.action == 'place'):
+            self.command_id = data.command_id
+            self.action = data.action # to be removed after msg modification
+            self.station_id = data.station_id
+            self.bound_mode = data.bound_mode
             if (self.dock_flag == True):
                 parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
                 rospy.loginfo('Calculated parking spots for placing: {}'.format(parking_spots))
@@ -103,16 +104,16 @@ class PlaceAction:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
-                self.reconf_client.update_configuration({"dock": False})
+                #self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
-                self.reconf_client.update_configuration({"dock": False})
+                #self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-                self.reconf_client.update_configuration({"dock": False})
+                #self.reconf_client.update_configuration({"dock": False})
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
@@ -130,11 +131,13 @@ class PlaceAction:
             return resp
         except rospy.ServiceException:
             rospy.logerr('Calculating Docking Position Service call Failed!')
-    
+
+    '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
         #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.dock_flag = config['dock']
+    '''
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """
@@ -151,7 +154,7 @@ class PlaceAction:
             msg.bound_mode = self.bound_mode
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
-                self.reconf_client.update_configuration({"dock": False})
+                #self.reconf_client.update_configuration({"dock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return  

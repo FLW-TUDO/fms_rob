@@ -44,7 +44,7 @@ class DUActionServer:
         self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         self.du_server.start()
         '''Create dynamic reconfigure client to obtain cart id'''
-        #self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
@@ -93,7 +93,7 @@ class DUActionServer:
             rospy.sleep(0.2) # wait for complete halt of robot
             self.reset_odom()
             success_move = self.do_du_move(dock_distance/2.0) # move under cart
-            #self.save_cart_pose() 
+            self.save_cart_pose() 
             success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
         else:
@@ -162,8 +162,8 @@ class DUActionServer:
             cart_theta = self.calc_cart_theta()
             robot_theta = self.curr_theta
             vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
-            print('Cart theta is: {}'.format(cart_theta))
-            print('Robot theta is: {}'.format(robot_theta))
+            #print('Cart theta is: {}'.format(cart_theta))
+            #print('Robot theta is: {}'.format(robot_theta))
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
@@ -253,7 +253,7 @@ class DUActionServer:
         rospy.loginfo('Rotation Successful')
         return success
     
-    '''
+    
     def save_cart_pose(self):
         """ Saves cart pose to enable returning it later during the return action. """
         self.reconf_client.update_configuration({"return_pose_trans_x": self.cart_pose_trans[0]})
@@ -262,7 +262,7 @@ class DUActionServer:
         self.reconf_client.update_configuration({"return_pose_rot_y": self.cart_pose_rot[1]})  
         self.reconf_client.update_configuration({"return_pose_rot_z": self.cart_pose_rot[2]})  
         self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})     
-    '''
+    
 
     def get_odom(self, data):
         """ Obtains current odom readings. """

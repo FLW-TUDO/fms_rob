@@ -41,7 +41,7 @@ class HomeAction:
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        #self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         self.undock_flag = True
         ###self.undock_flag = Bool()
@@ -51,10 +51,10 @@ class HomeAction:
 
     def home(self, data):
         """ Executes homing action. """
-        self.command_id = data.command_id
-        self.action = data.action # to be removed after msg modification
-        home_pose = rospy.get_param('/robot_home/'+ROBOT_ID) # add default pose
         if (data.action == 'home'):
+            self.command_id = data.command_id
+            self.action = data.action # to be removed after msg modification
+            home_pose = rospy.get_param('/robot_home/'+ROBOT_ID) # add default pose
             if (self.undock_flag == True):
                 if (home_pose == None):
                     rospy.logerr('Home Pose can Not be Obtained!')
@@ -97,11 +97,13 @@ class HomeAction:
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
-    
+
+    '''
     def dynamic_params_update(self, config):
         """ Dynamically Obtaining the interlock state. """
         #rospy.loginfo("Config set to {cart_id}, {pick}, {dock}, {undock}, {place}, {home}, {return}".format(**config))
         self.undock_flag = config['undock']
+    '''
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """
@@ -117,7 +119,7 @@ class HomeAction:
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
                 ###self.reconf_client.update_configuration({"undock": False})
-                self.reconf_client.update_configuration({"pick": True})
+                #self.reconf_client.update_configuration({"pick": True})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
