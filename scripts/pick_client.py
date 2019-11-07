@@ -57,12 +57,12 @@ class PickAction:
 
     def pick(self, data):
         """ Executes picking action. """
-        self.command_id = data.command_id
-        self.action = data.action # to be removed after msg modification
-        self.cart_id = data.cart_id
-        #self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
-        self.cart_id_pub.publish(self.cart_id)
         if (data.action == 'pick'):
+            self.command_id = data.command_id
+            self.action = data.action # to be removed after msg modification
+            self.cart_id = data.cart_id
+            #self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
+            self.cart_id_pub.publish(self.cart_id)
             if ((self.home_flag == True) or (self.undock_flag == True)):
                 dock_pose = self.calc_dock_position(self.cart_id)
                 rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))

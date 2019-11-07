@@ -51,10 +51,10 @@ class DUActionClient:
 
     def dock(self, data):
         """ Executes the dock or undock action. """
-        self.command_id = data.command_id
-        self.action = data.action # to be removed after msg modification
-        goal = dockUndockGoal()
         if (data.action == 'dock'):
+            self.command_id = data.command_id # Note: command id is updated only when the action is chosen and not for all sent actions
+            self.action = data.action # to be removed after msg modification
+            goal = dockUndockGoal()
             if (self.pick_flag == True):
                 rospy.loginfo('Sending Dock goal to action server') 
                 goal.distance = rospy.get_param(ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
@@ -69,6 +69,9 @@ class DUActionClient:
                 rospy.logerr('Action Rejected! - Attempting to dock without pick')
                 return
         elif (data.action == 'undock'):
+            self.command_id = data.command_id
+            self.action = data.action # to be removed after msg modification
+            goal = dockUndockGoal()
             if(self.return_flag == True):
                 #self.reconf_client.update_configuration({"return": False})
                 rospy.loginfo('Sending Undock goal to action server') 

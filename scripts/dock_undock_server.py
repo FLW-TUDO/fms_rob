@@ -48,7 +48,7 @@ class DUActionServer:
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id)
+        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         self.move_speed = 0.2
@@ -79,7 +79,7 @@ class DUActionServer:
         rospy.loginfo('Dock-Undock Server Ready')
 
     def execute(self, goal):
-        cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose)
+        cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode # docking or undocking
@@ -101,6 +101,7 @@ class DUActionServer:
             self.reset_odom()
             success_rotate = self.do_du_rotate(dock_angle) 
             success_move = self.do_du_move(dock_distance)
+            self.klt_num_pub.publish('')
         if (success_move and success_elev and success_rotate):
             self.result.res = True
             self.du_server.set_succeeded(self.result)
@@ -285,6 +286,7 @@ class DUActionServer:
     
     def update_cart_id(self, data):
         self.cart_id = data.data
+        rospy.loginfo('Cart id updated to: {}'.format(self.cart_id))
     
     '''
     def update_cart_pose(self, data):
