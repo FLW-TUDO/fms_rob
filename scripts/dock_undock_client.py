@@ -127,9 +127,12 @@ class DUActionClient:
             if (status == 3): # if action execution is successful
                 if(msg.action == 'dock'):
                     self.reconf_client.update_configuration({"dock": True})
+                    self.reconf_client.update_configuration({"pick": False})
+                    self.reconf_client.update_configuration({"undock": False})
+                    self.reconf_client.update_configuration({"home": False})
                 else:
                     self.reconf_client.update_configuration({"undock": True})
-                self.reconf_client.update_configuration({"pick": False})
+                    self.reconf_client.update_configuration({"return": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return

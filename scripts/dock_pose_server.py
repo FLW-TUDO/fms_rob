@@ -46,7 +46,7 @@ def get_docking_pose(req):
         rospy.sleep(0.4)
         if (pose_updated == True):
             rospy.loginfo('Cart vicon topic updated')
-            rospy.sleep(2)
+            rospy.sleep(1)
             print('Cart id Goal var being calculated for is: {}'.format(goal)) ###
             goal_rot = [goal.transform.rotation.x, goal.transform.rotation.y, goal.transform.rotation.z, goal.transform.rotation.w]
             goal_euler = tf_conversions.transformations.euler_from_quaternion(goal_rot)

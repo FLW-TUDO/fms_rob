@@ -47,9 +47,9 @@ class PlaceAction:
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.park_distance = 1.1 # min: 1.02
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        #self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
-        self.dock_flag = Bool()
-        self.dock_flag = True
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+        #self.dock_flag = Bool()
+        #self.dock_flag = True
         rospy.sleep(1)
         rospy.loginfo('Ready for Placing')
 
@@ -60,7 +60,8 @@ class PlaceAction:
             self.action = data.action # to be removed after msg modification
             self.station_id = data.station_id
             self.bound_mode = data.bound_mode
-            if (self.dock_flag == True):
+            dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
+            if (dock_flag == True):
                 parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
                 rospy.loginfo('Calculated parking spots for placing: {}'.format(parking_spots))
                 goal = MoveBaseGoal()
@@ -104,16 +105,16 @@ class PlaceAction:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
-                #self.reconf_client.update_configuration({"dock": False})
+                self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
-                #self.reconf_client.update_configuration({"dock": False})
+                self.reconf_client.update_configuration({"dock": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-                #self.reconf_client.update_configuration({"dock": False})
+                self.reconf_client.update_configuration({"dock": False})
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
@@ -155,10 +156,13 @@ class PlaceAction:
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
                 #self.reconf_client.update_configuration({"dock": False})
+                self.reconf_client.update_configuration({"place": True})
+                #self.reconf_client.update_configuration({"dock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return  
             if (status == 4): # if action execution is aborted
+                self.reconf_client.update_configuration({"dock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('Execution Aborted by Move Base Server!')               

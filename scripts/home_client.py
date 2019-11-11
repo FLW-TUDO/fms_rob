@@ -41,9 +41,9 @@ class HomeAction:
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        #self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30, config_callback=self.dynamic_params_update) # client of fms_rob dynmaic reconfigure server
+        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.undock_flag = True
+        #self.undock_flag = True
         ###self.undock_flag = Bool()
         #self.home_pose = {}
         rospy.sleep(1)
@@ -55,7 +55,8 @@ class HomeAction:
             self.command_id = data.command_id
             self.action = data.action # to be removed after msg modification
             home_pose = rospy.get_param('/robot_home/'+ROBOT_ID) # add default pose
-            if (self.undock_flag == True):
+            undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
+            if (undock_flag == True):
                 if (home_pose == None):
                     rospy.logerr('Home Pose can Not be Obtained!')
                     return
@@ -78,22 +79,22 @@ class HomeAction:
                 self.status_flag = True
             else:
                 #self.act_client.cancel_goal()
-                rospy.logerr('Action Rejected! - Attempting to home without undock!')
+                rospy.logerr('Action Rejected! - Attempting to home without undock')
                 return
         else:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
                 rospy.logwarn('Cancelling Current Goal')
-                ###self.reconf_client.update_configuration({"undock": False})
+                self.reconf_client.update_configuration({"undock": False})
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
                 rospy.logwarn('cancelling All Goals')
-                ###self.reconf_client.update_configuration({"undock": False})
+                self.reconf_client.update_configuration({"undock": False})
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-                ###self.reconf_client.update_configuration({"undock": False})
+                self.reconf_client.update_configuration({"undock": False})
             self.act_client.stop_tracking_goal()
             self.status_flag = False
             return
@@ -118,12 +119,14 @@ class HomeAction:
             msg.action = self.action # to be removed after msg modification
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
-                ###self.reconf_client.update_configuration({"undock": False})
-                #self.reconf_client.update_configuration({"pick": True})
+                self.reconf_client.update_configuration({"home": True})
+                self.reconf_client.update_configuration({"pick": False})
+                self.reconf_client.update_configuration({"undock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
+                self.reconf_client.update_configuration({"undock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('Execution Aborted by Move Base Server!')
