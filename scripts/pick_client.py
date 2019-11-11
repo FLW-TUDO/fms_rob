@@ -46,12 +46,20 @@ class PickAction:
         self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10)
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.dock_distance = 1.0 # min: 1.0
-        rospy.set_param(ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
+        rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
         self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.home_flag = True
-        self.undock_flag = True
+        #self.home_flag = True
+        #self.undock_flag = True
+        self.reconf_client.update_configuration({'home': True})
+        self.reconf_client.update_configuration({'undock': True})
+        self.reconf_client.update_configuration({'pick': False})
+        self.reconf_client.update_configuration({'place': False})
+        self.reconf_client.update_configuration({'home': False})
+        self.reconf_client.update_configuration({'return': False})
+        #rospy.set_param('/dynamic_reconf_server/home', True)
+        #rospy.set_param('/dynamic_reconf_server/undock', True)
         rospy.sleep(1)
         rospy.loginfo('Ready for Picking')
 
@@ -63,7 +71,10 @@ class PickAction:
             self.cart_id = data.cart_id
             #self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
             self.cart_id_pub.publish(self.cart_id)
-            if ((self.home_flag == True) or (self.undock_flag == True)):
+            home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
+            undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
+            if ((home_flag == True) or (undock_flag == True)):
+                print('calculating docking position for cart_id: {}'.format(self.cart_id)) ###
                 dock_pose = self.calc_dock_position(self.cart_id)
                 rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))
                 if (dock_pose == None):
@@ -88,17 +99,21 @@ class PickAction:
                 self.status_flag = True
             else:
                 #self.act_client.cancel_goal()
+                #self.reconf_client.update_configuration({'pick': False})
                 rospy.logerr('Action Rejected! - Attempting to pick without undock or home')
                 return
         else:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
+                self.reconf_client.update_configuration({'pick': False})
                 rospy.logwarn('Cancelling Current Goal')
             if (data.action == 'cancelAll'):
                 self.act_client.cancel_all_goals()
+                self.reconf_client.update_configuration({'pick': False})
                 rospy.logwarn('cancelling All Goals')
             if (data.action == 'cancelAtAndBefore'):
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
+                self.reconf_client.update_configuration({'pick': False})
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
             self.act_client.stop_tracking_goal()
@@ -108,13 +123,15 @@ class PickAction:
     def calc_dock_position(self, cart_id):
         """ Calls a service to calculate the pick position infront of the desired cart. """
         rospy.loginfo('Calculating Docking Position')
+        print('Cart id received is: {}'.format(cart_id)) ###
         rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
             get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
             resp = get_goal_offset(cart_id, self.dock_distance)
+            rospy.loginfo('Calculating Docking Pose Service call Successful')
             return resp.dock_pose
         except rospy.ServiceException:
-            rospy.logerr('Calculating Docking Position Service call Failed!')
+            rospy.logerr('Calculating Docking Pose Service call Failed!')
 
     '''
     def dynamic_params_update(self, config):
@@ -138,10 +155,12 @@ class PickAction:
             msg.cart_id = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
+                self.reconf_client.update_configuration({'pick': True})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
+                self.reconf_client.update_configuration({'pick': False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('Execution Aborted by Move Base Server!')
