@@ -78,15 +78,15 @@ class CommandRouter:
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
             cancellation_stamp = mqtt_msg['cancellation_stamp']
-            # pose translation
-            goal.position.x = mqtt_msg['pose']['translation']['x']
-            goal.position.y = mqtt_msg['pose']['translation']['y']
-            goal.position.z = mqtt_msg['pose']['translation']['z']
+            # pose position
+            goal.position.x = mqtt_msg['pose']['position']['x']
+            goal.position.y = mqtt_msg['pose']['position']['y']
+            goal.position.z = mqtt_msg['pose']['position']['z']
             # pose orientation
-            goal.orientation.x = mqtt_msg['pose']['rotation']['x']
-            goal.orientation.y = mqtt_msg['pose']['rotation']['y']
-            goal.orientation.z = mqtt_msg['pose']['rotation']['z']
-            goal.orientation.w = mqtt_msg['pose']['rotation']['w']
+            goal.orientation.x = mqtt_msg['pose']['orientation']['x']
+            goal.orientation.y = mqtt_msg['pose']['orientation']['y']
+            goal.orientation.z = mqtt_msg['pose']['orientation']['z']
+            goal.orientation.w = mqtt_msg['pose']['orientation']['w']
             self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp)
         else:
             pass
