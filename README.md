@@ -41,12 +41,12 @@ Port: 8888
 "robot_id": "rb1_base_b",
 "command_id": "task123",
 "pose": {
-"translation": {
+"position": {
 "x": 0,
 "y": 0,
 "z": 0
 },
-"rotation": {
+"orientation": {
 "x": 0,
 "y": 0,
 "z": 0,
@@ -100,6 +100,8 @@ uint8 status
 * **undock**: Performs the undocking operation which consists of: 1) elevator drop, 2) 180<sup>o</sup> rotaion, 3) motion out from under cart
 * **place**: Places the cart near one of the stations in one of 3 locations (*bound mode*): *inbound*, *outbound*, or *queue*
 * **drive**: Navigates the robot to a pose spectified by the user
+* **return**: return the cart to its pick up position
+* **home**: sends robot to its predefined home position
 * **cancelCurrent**: cancels currently active goal (task)
 * **cancelAll**: cancels all goals (tasks) in the queue of the action server
 * **cancelAtAndBefore**: cancel all goals (tasks) at and before a time stamp (cancellation_stamp) specified by the user
