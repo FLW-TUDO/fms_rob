@@ -176,15 +176,20 @@ class CommandRouter:
     def status_mapping_update(self, data):
         """ Publishes status messages back to user via MQTT. """
         msg = MqttAck() # custom msg type that acts as container for ros messages pre-sending back to user
-        msg.robotid = ROBOT_ID
-        msg.cartid = data.cart_id
-        msg.command = data.action
-        msg.commandid = data.command_id
+        msg.robot_id = ROBOT_ID
+        msg.cart_id = data.cart_id
+        msg.station_id = data.station_id
+        msg.bound_mode = data.bound_mode
+        msg.action = data.action
+        msg.command_id = data.command_id
+        msg.status = data.status
+        '''
         if (data.status == 3):
             msg.response = 'finished'
         elif (data.status == 1):
             msg.response = 'moving'
         else: msg.response = 'free'
+        '''
         msg_json = self.msg2json(msg)
         rospy.loginfo_throttle(2, 'sending status data via mqtt')
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
