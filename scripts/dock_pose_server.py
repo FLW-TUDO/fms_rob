@@ -17,7 +17,7 @@ from fms_rob.srv import dockPose
 #######################################################################################
 '''
 
-ROBOT_ID = rospy.get_param('/ROBOT_ID', 'rb1_base_b') # by default the robot id is set in the package's launch file
+ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the package's launch file
 
 '''
 #######################################################################################
