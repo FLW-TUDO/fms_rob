@@ -184,8 +184,8 @@ class DUActionServer:
             cart_theta = self.calc_cart_theta()
             robot_theta = self.curr_theta
             vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
-            print('Cart theta is: {}'.format(cart_theta))
-            print('Robot theta is: {}'.format(robot_theta))
+            #print('Cart theta is: {}'.format(cart_theta))
+            #print('Robot theta is: {}'.format(robot_theta))
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0

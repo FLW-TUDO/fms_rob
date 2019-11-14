@@ -42,7 +42,7 @@ def get_parking_spots(req):
         rospy.logerr('Station Topic Not Found!')
         return
     rospy.Subscriber('/vicon/'+station_id+'/'+station_id, TransformStamped, get_vicon_pose)
-    rospy.sleep(1)    
+    rospy.sleep(1) #waits for completion of topic subscribtion   
     station_pose_quat = [station_pose.transform.rotation.x, station_pose.transform.rotation.y, station_pose.transform.rotation.z, station_pose.transform.rotation.w]
     #station_pose_euler = tf_conversions.transformations.euler_from_quaternion(station_pose_quat)
    

@@ -154,6 +154,7 @@ class DUActionClient:
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
+        self.act_client.cancel_all_goals()
         rospy.logwarn('Dock Undock Client node shutdown by user')
 
 if __name__ == '__main__':
