@@ -24,12 +24,12 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the 
 '''
 
 goal = TransformStamped()
-pose_updated = Bool()
-#pose_sub = rospy.Subscriber()
+#pose_updated = Bool()
+pose_sub = None
 
 def get_docking_pose(req):
-    global goal, pose_updated
-    pose_updated = False
+    global goal, pose_sub
+    #pose_updated = False
     goal_result = Pose()
     cart_id = req.cart_id
     distance = req.distance
@@ -38,38 +38,38 @@ def get_docking_pose(req):
     if(topic not in rospy.get_published_topics('/vicon/')):
         rospy.logerr('Cart Topic Not Found!')
         return
-    print('Cart id pose being calculated for: {}'.format(cart_id)) ###
+    #print('Cart id pose being calculated for: {}'.format(cart_id)) ###
     while (True):
-        rospy.Subscriber('/vicon/'+cart_id+'/'+cart_id, TransformStamped, get_vicon_pose)
-        print('Topic to be subscribed to is: {}'.format('/vicon/'+cart_id+'/'+cart_id))
-        print('Update Flag Status is: {}'.format(pose_updated))
-        rospy.sleep(0.4)
-        if (pose_updated == True):
-            rospy.loginfo('Cart vicon topic updated')
-            rospy.sleep(1)
-            print('Cart id Goal var being calculated for is: {}'.format(goal)) ###
-            goal_rot = [goal.transform.rotation.x, goal.transform.rotation.y, goal.transform.rotation.z, goal.transform.rotation.w]
-            goal_euler = tf_conversions.transformations.euler_from_quaternion(goal_rot)
-            # offset from goal to gurantee proper docking
-            goal_result.position.x = goal.transform.translation.x - (distance * cos(goal_euler[2])) # distance offset from cart
-            goal_result.position.y = goal.transform.translation.y - (distance * sin(goal_euler[2]))
-            # get cart orientation
-            goal_result.orientation.x = goal_rot[0] # same orientation as cart
-            goal_result.orientation.y = goal_rot[1]
-            goal_result.orientation.z = goal_rot[2]
-            goal_result.orientation.w = goal_rot[3]
-            rospy.loginfo('Docking Pose Calculated')
-            return goal_result
-        else:
-            rospy.loginfo('Cart vicon topic Not updated!')
-            continue
+        pose_sub = rospy.Subscriber('/vicon/'+cart_id+'/'+cart_id, TransformStamped, get_vicon_pose)
+        #print('Topic to be subscribed to is: {}'.format('/vicon/'+cart_id+'/'+cart_id))
+        #print('Update Flag Status is: {}'.format(pose_updated))
+        #rospy.sleep(0.4)
+        #if (pose_updated == True):
+        #rospy.loginfo('Cart vicon topic updated')
+        rospy.sleep(1) # wait for cart topic subscribtion
+        print('Cart id Goal being calculated for is: {}'.format(goal)) ###
+        goal_rot = [goal.transform.rotation.x, goal.transform.rotation.y, goal.transform.rotation.z, goal.transform.rotation.w]
+        goal_euler = tf_conversions.transformations.euler_from_quaternion(goal_rot)
+        # offset from goal to gurantee proper docking
+        goal_result.position.x = goal.transform.translation.x - (distance * cos(goal_euler[2])) # distance offset from cart
+        goal_result.position.y = goal.transform.translation.y - (distance * sin(goal_euler[2]))
+        # get cart orientation
+        goal_result.orientation.x = goal_rot[0] # same orientation as cart
+        goal_result.orientation.y = goal_rot[1]
+        goal_result.orientation.z = goal_rot[2]
+        goal_result.orientation.w = goal_rot[3]
+        rospy.loginfo('Docking Pose Calculated')
+        return goal_result
+        #else:
+        #    rospy.loginfo('Cart vicon topic Not updated!')
+        #    continue
 
 def get_vicon_pose(data):
     """ Returns the location of the cart in Vicon. """
-    global goal, pose_updated
+    global goal, pose_sub
     goal = data
-    pose_updated = True
-    #pose_sub.unregister()
+    #pose_updated = True
+    pose_sub.unregister() #avoids previous cart id persistence
 
 def dock_pose_server():
     s = rospy.Service('/'+ROBOT_ID+'/get_docking_pose', dockPose, get_docking_pose)
