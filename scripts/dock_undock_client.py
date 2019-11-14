@@ -57,12 +57,17 @@ class DUActionClient:
             goal = dockUndockGoal()
             pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
             if (pick_flag == True):
-                goal.distance = rospy.get_param('/'+ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
-                goal.angle = pi
-                goal.mode = True # True --> Dock // False --> Undock
-                #self.act_client.send_goal_and_wait(goal) # blocking
-                self.act_client.send_goal(goal) # non-blocking
-                self.status_flag = True
+                status = self.act_client.get_state()
+                if (status != 1):
+                    goal.distance = rospy.get_param('/'+ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
+                    goal.angle = pi
+                    goal.mode = True # True --> Dock // False --> Undock
+                    #self.act_client.send_goal_and_wait(goal) # blocking
+                    self.act_client.send_goal(goal) # non-blocking
+                    self.status_flag = True
+                else:
+                    rospy.logerr('Dock Action Rejected! - Already processing a docking operation')
+                return
             else:
                 rospy.logerr('Action Rejected! - Attempting to dock without pick')
                 return
@@ -72,14 +77,18 @@ class DUActionClient:
             goal = dockUndockGoal()
             return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
             if(return_flag == True):
-                #self.reconf_client.update_configuration({"return": False})
-                rospy.loginfo('Sending Undock goal to action server') 
-                goal.distance = 0.5 # fixed distance when robot moves out from under cart
-                goal.angle = pi
-                goal.mode = False # True --> Dock // False --> Undock
-                #self.act_client.send_goal_and_wait(goal) # blocking
-                self.act_client.send_goal(goal) # non-blocking
-                self.status_flag = True
+                status = self.act_client.get_state()
+                if (status != 1):
+                    rospy.loginfo('Sending Undock goal to action server') 
+                    goal.distance = 0.5 # fixed distance when robot moves out from under cart
+                    goal.angle = pi
+                    goal.mode = False # True --> Dock // False --> Undock
+                    #self.act_client.send_goal_and_wait(goal) # blocking - Cancellations Not possible
+                    self.act_client.send_goal(goal) # non-blocking
+                    self.status_flag = True
+                else:
+                    rospy.logerr('Undock Action Rejected! - Already processing an undocking operation')
+                return
             else:
                 rospy.logerr('Action Rejected! - Attempting to undock without return')
                 return 
