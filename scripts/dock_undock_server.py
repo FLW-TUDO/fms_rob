@@ -51,19 +51,19 @@ class DUActionServer:
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         ''' P-Controller settings for primary motion '''
-        #self.move_speed = 0.14
-        self.move_kp = 0.99
-        #self.rot_kp = 0.99
+        self.move_speed = 0.12 #0.14
+        #self.move_kp = 0.99 #0.99
+        #self.rot_kp = 0.99 #0.99
         self.rot_speed = 0.57 #0.5
         self.move_tolerance = 0.005 #0.005
         self.ang_tolerance = 0.002 #0.002
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
         ''' PD-Controller settings for secondary move '''
-        self.error_theta = 1.0
+        self.error_theta = 1.0 #1.0
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
-        self.kp_orient = 0.3 #0.3
+        self.kp_orient = 0.2 #0.3
         self.kp_trans = 0.8 #0.8
         self.distance_tolerance = 0.003 #0.003
         self.orientation_tolerance = 0.02 #0.02
@@ -90,17 +90,21 @@ class DUActionServer:
         success_se_move = False # secondary motion to adjust docking distance
         success_elev = False
         success_rotate = False
-        sucess_odom_reset = False
+        success_odom_reset = False
         self.result.res = False
         if (elev_mode == True): # True --> Dock // False --> Undock
             success_se_move = self.do_du_se_move(dock_distance) # pre-motion before cart
             rospy.sleep(0.2) # wait for complete halt of robot
-            sucess_odom_reset = self.reset_odom()
-            success_move = self.do_du_move(dock_distance/2.0) # move under cart
+            if (success_se_move):
+                success_odom_reset = self.reset_odom()
+            if (success_odom_reset):
+                success_move = self.do_du_move(dock_distance/2.0) # move under cart
             self.save_cart_pose() 
-            success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
-            success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
-            if (success_move and success_elev and success_rotate and sucess_odom_reset and success_se_move):
+            if (success_move):
+                success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
+            if (success_elev):
+                success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
+            if (success_move and success_elev and success_rotate and success_odom_reset and success_se_move):
                 self.result.res = True
                 self.du_server.set_succeeded(self.result)
             else: 
@@ -109,10 +113,13 @@ class DUActionServer:
         else:
             success_elev = self.do_du_elev(elev_mode)
             rospy.sleep(0.2)
-            self.reset_odom()
-            success_rotate = self.do_du_rotate(dock_angle) 
-            success_move = self.do_du_move(dock_distance)
-            if (success_move and success_elev and success_rotate and sucess_odom_reset):
+            if (success_elev):
+                success_odom_reset = self.reset_odom()
+            if (success_odom_reset):
+                success_rotate = self.do_du_rotate(dock_angle) 
+            if (success_rotate):
+                success_move = self.do_du_move(dock_distance)
+            if (success_move and success_elev and success_rotate and success_odom_reset):
                 self.klt_num_pub.publish('') # reset robot vicon location for ros_mocap package
                 self.result.res = True
                 self.du_server.set_succeeded(self.result)
@@ -177,8 +184,8 @@ class DUActionServer:
             cart_theta = self.calc_cart_theta()
             robot_theta = self.curr_theta
             vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
-            #print('Cart theta is: {}'.format(cart_theta))
-            #print('Robot theta is: {}'.format(robot_theta))
+            print('Cart theta is: {}'.format(cart_theta))
+            print('Robot theta is: {}'.format(robot_theta))
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
@@ -197,14 +204,15 @@ class DUActionServer:
         vel_msg = Twist()
         r = rospy.Rate(10)
         rospy.loginfo('Current Odom value{}'.format(abs(self.odom_coor.position.x)))
-        #while(abs(self.odom_coor.position.x) < distance):
-        while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
+        while(abs(self.odom_coor.position.x) < distance):
+        #while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
+                rospy.loginfo_throttle(1, 'Goal preempted')
                 success = False
                 return success
             rospy.loginfo_throttle(1, 'Moving under Cart') # periodic logging
-            vel_msg.linear.x = (distance - abs(self.odom_coor.position.x))*self.move_kp #self.move_speed
+            vel_msg.linear.x = self.move_speed #(distance - abs(self.odom_coor.position.x))*self.move_kp
             vel_msg.angular.z = 0
             self.vel_pub.publish(vel_msg)
             self.feedback.odom_data = self.odom_data
@@ -243,12 +251,11 @@ class DUActionServer:
                 move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
                 move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
             rospy.loginfo('Elevator Service call Successful')
-            success = True
         except rospy.ServiceException: 
             rospy.logerr('Elevator Service call Failed!')
             success = False
-            self.result.res = False
-            self.du_server.set_aborted(self.result) # allows only one action to be handled by the dock undock server till completion
+            #self.result.res = False
+            #self.du_server.set_aborted(self.result)
         return success
     
     def do_du_rotate(self, angle):
