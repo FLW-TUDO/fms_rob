@@ -74,12 +74,12 @@ class ReturnAction:
                 goal.target_pose.pose.orientation.z = self.return_pose['rot_z']
                 goal.target_pose.pose.orientation.w = self.return_pose['rot_w']
                 '''
-                goal.target_pose.pose.position.x = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_trans_x')
-                goal.target_pose.pose.position.y = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_trans_y')
-                goal.target_pose.pose.orientation.x = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_x')
-                goal.target_pose.pose.orientation.y = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_y')
-                goal.target_pose.pose.orientation.z = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_z')
-                goal.target_pose.pose.orientation.w = rospy.get_param('/rb1_base_b/dynamic_reconf_server/return_pose_rot_w')
+                goal.target_pose.pose.position.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_x')
+                goal.target_pose.pose.position.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_y')
+                goal.target_pose.pose.orientation.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_x')
+                goal.target_pose.pose.orientation.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
+                goal.target_pose.pose.orientation.z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
+                goal.target_pose.pose.orientation.w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
                 rospy.loginfo('Sending Return goal to action server') 
                 rospy.loginfo('Return goal coordinates: {}'.format(goal))
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
