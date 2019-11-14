@@ -54,6 +54,7 @@ class PickAction:
         #self.undock_flag = True
         self.reconf_client.update_configuration({'home': True})
         self.reconf_client.update_configuration({'undock': True})
+        self.reconf_client.update_configuration({'dock': False})
         self.reconf_client.update_configuration({'pick': False})
         self.reconf_client.update_configuration({'place': False})
         self.reconf_client.update_configuration({'home': False})
@@ -74,9 +75,9 @@ class PickAction:
             home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
             undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
             if ((home_flag == True) or (undock_flag == True)):
-                print('calculating docking position for cart_id: {}'.format(self.cart_id)) ###
+                #print('calculating docking position for cart_id: {}'.format(self.cart_id)) ###
                 dock_pose = self.calc_dock_position(self.cart_id)
-                rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))
+                #rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))
                 if (dock_pose == None):
                     rospy.logerr('Cart Topic Not Found!')
                     return
@@ -95,7 +96,7 @@ class PickAction:
                 reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
                 reset_costmaps()
                 #self.act_client.send_goal_and_wait(goal) # blocking
-                self.act_client.send_goal(goal) # non-blocking
+                self.act_client.send_goal(goal) # non-blocking - Also alternative goal pursuit is also possible in this mode
                 self.status_flag = True
             else:
                 #self.act_client.cancel_goal()
