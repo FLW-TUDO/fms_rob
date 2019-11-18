@@ -126,7 +126,7 @@ class HomeAction:
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
-                self.reconf_client.update_configuration({"undock": False})
+                #self.reconf_client.update_configuration({"undock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('Execution Aborted by Move Base Server!')

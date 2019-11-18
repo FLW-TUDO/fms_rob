@@ -145,8 +145,8 @@ class ReturnAction:
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
-                self.reconf_client.update_configuration({"place": False})
-                self.reconf_client.update_configuration({"dock": False})
+                #self.reconf_client.update_configuration({"place": False})
+                #self.reconf_client.update_configuration({"dock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('Execution Aborted by Move Base Server!')
