@@ -16,7 +16,7 @@ import dynamic_reconfigure.client
 if __name__ == '__main__':
     rospy.init_node('test')
     print('testing')
-    reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
-    print('Updating cart config')
-    reconf_client.update_configuration({"cart_id": 'KLT_KLT'})
+    reconf_client = dynamic_reconfigure.client.Client("rb1_base_b/move_base/TebLocalPlannerROS", timeout=30) # client of fms_rob dynmaic reconfigure server
+    print('updaing congfig')
+    reconf_client.update_configuration({"min_obstacle_dist": 0.3})
     rospy.spin()
