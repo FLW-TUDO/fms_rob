@@ -43,14 +43,14 @@ class DUActionServer:
         rospy.init_node('dock_undock_server')
         self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         self.du_server.start()
-        self.reconf_client = dynamic_reconfigure.client.Client('dynamic_reconf_server', timeout=30) # client of fms_rob dynmaic reconfigure server
-        self.teb_reconf_client = dynamic_reconfigure.client.Client(ROBOT_ID+'/move_base/TebLocalPlannerROS', timeout=30)
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
+        self.reconf_client = dynamic_reconfigure.client.Client('dynamic_reconf_server', timeout=30) # client of fms_rob dynmaic reconfigure server
+        self.teb_reconf_client = dynamic_reconfigure.client.Client('/'+ROBOT_ID+'/move_base/TebLocalPlannerROS', timeout=30)
         ''' P-Controller settings for primary motion '''
         self.move_speed = 0.12 #0.14
         #self.move_kp = 0.99 #0.99
@@ -62,6 +62,7 @@ class DUActionServer:
         self.result = dockUndockResult()
         ''' PD-Controller settings for secondary move '''
         self.error_theta = 1.0 #1.0
+        self.theta_tolerance = 0.02
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
         self.kp_orient = 0.2 #0.3
@@ -77,13 +78,15 @@ class DUActionServer:
         self.last_error_theta = 0.0
         self.output = 0.0
         self.start_msg = Bool()
-        self.theta_msg = Float32()
+        #self.theta_msg = Float32()
+        #self.cart_id = String()
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('Dock-Undock Server Ready')
 
     def execute(self, goal):
-        cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id
+        pick_cart_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id
+        rospy.sleep(1)
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode # docking or undocking
@@ -367,9 +370,9 @@ class DUActionServer:
     def angular_vel(self, goal_x, goal_y):
         """ PD controller output calculation. """
         current_time = None
-        self.error_theta= self.goal_angle(goal_x, goal_y) - self.curr_theta
-        self.error_theta= atan2(sin(self.error_theta),cos(self.error_theta))
-        self.theta_msg = self.error_theta
+        self.error_theta = self.goal_angle(goal_x, goal_y) - self.curr_theta
+        self.error_theta = atan2(sin(self.error_theta), cos(self.error_theta)) #### ?
+        #self.theta_msg = self.error_theta
         self.current_time = current_time if current_time is not None else time.time()
         delta_time = self.current_time - self.last_time
         delta_error = self.error_theta - self.last_error_theta
