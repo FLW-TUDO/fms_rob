@@ -158,7 +158,7 @@ class PlaceAction:
                 #self.reconf_client.update_configuration({"dock": False})
                 self.reconf_client.update_configuration({"place": True})
                 #self.reconf_client.update_configuration({"dock": False})
-                self.act_client.stop_tracking_goal()
+                #self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return  
             if (status == 4): # if action execution is aborted
