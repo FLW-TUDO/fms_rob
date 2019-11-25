@@ -34,7 +34,13 @@ class DUActionClient:
         rospy.init_node('dock_undock_client')
         self.status_flag = False # used to throttle further message sending after action execution
         self.act_client = actionlib.SimpleActionClient('do_dock_undock', dockUndockAction) 
-        rospy.loginfo('Waiting for dock_undock_server')
+        err_flag = False
+        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+            pass
+        else:
+            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))
+            err_flag = True        
         self.act_client.wait_for_server() # wait for server start up
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.dock)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/do_dock_undock/status', GoalStatusArray, self.status_update) # status from dock_undock action server 
@@ -47,7 +53,10 @@ class DUActionClient:
         #self.pick_flag = True
         #self.return_flag = True
         rospy.sleep(1)
-        rospy.loginfo('Ready for Docking')
+        if not err_flag:
+            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+        else:
+            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
 
     def dock(self, data):
         """ Executes the dock or undock action. """
@@ -126,7 +135,8 @@ class DUActionClient:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
-            print(status)
+            #print(status)
+            rospy.loginfo_throttle(1, '[ {} ] >>> Status: {} '.format(rospy.get_name, status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status
@@ -150,17 +160,17 @@ class DUActionClient:
                 #self.reconf_client.update_configuration({"return": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logerr('Execution Aborted by Dock-Undock Server!')
+                rospy.logerr('[ {} ]: Execution Aborted by Dock-Undock Server!'.format(rospy.get_name()))
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         self.act_client.cancel_all_goals()
-        rospy.logwarn('Dock Undock Client node shutdown by user')
+        rospy.logwarn('[ {} ]: node shutdown by user'.format(rospy.get_name()))
 
 if __name__ == '__main__':
     try:
         dc = DUActionClient()    
     except KeyboardInterrupt:
         sys.exit()
-        rospy.logerr('Interrupted!')
+        #rospy.logerr('Interrupted!')
     rospy.spin()

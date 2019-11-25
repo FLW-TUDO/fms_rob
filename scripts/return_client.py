@@ -37,8 +37,14 @@ class ReturnAction:
         rospy.init_node('return_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
         self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
-        rospy.loginfo('Waiting for move_base server')
-        self.act_client.wait_for_server() # wait for server start up
+        rospy.loginfo('[ {} ]: Waiting for move_base server'.format(rospy.get_name()))
+        err_flag = False
+        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+            pass
+        else:
+            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))
+            err_flag = True
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.returns)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
@@ -50,8 +56,10 @@ class ReturnAction:
         ###self.dock_flag = Bool()
         ###self.place_flag = Bool()
         rospy.sleep(1)
-        rospy.loginfo('Ready for Returning')
-
+        if not err_flag:
+            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+        else:
+            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
     def returns(self, data):
         """ Executes returning action. """
         self.command_id = data.command_id
@@ -80,8 +88,8 @@ class ReturnAction:
                 goal.target_pose.pose.orientation.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
                 goal.target_pose.pose.orientation.z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
                 goal.target_pose.pose.orientation.w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
-                rospy.loginfo('Sending Return goal to action server') 
-                rospy.loginfo('Return goal coordinates: {}'.format(goal))
+                rospy.loginfo('[ {} ]: Sending Return goal to action server'.format(rospy.get_name())) 
+                #rospy.loginfo('Return goal coordinates: {}'.format(goal))
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
                 reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
                 reset_costmaps()
@@ -90,7 +98,7 @@ class ReturnAction:
                 self.status_flag = True
             else:
                 #self.act_client.cancel_goal()
-                rospy.logerr('Action Rejected! - Attempting to Return without Dock or Place')
+                rospy.logerr('[ {} ]: Action Rejected! - Attempting to Return without Dock or Place'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):
@@ -129,7 +137,8 @@ class ReturnAction:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
-            print(status)
+            #print(status)
+            rospy.loginfo_throttle(1, '[ {} ] >>> Status: {} '.format(rospy.get_name(), status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status
@@ -149,17 +158,17 @@ class ReturnAction:
                 #self.reconf_client.update_configuration({"dock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logerr('Execution Aborted by Move Base Server!')
+                rospy.logerr('[ {} ]: Execution Aborted by Move Base Server!'.format(rospy.get_name()))
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         self.act_client.cancel_all_goals()
-        rospy.logwarn('Return Client node shutdown by user')
+        rospy.logwarn('[ {} ]: node shutdown by user'.format(rospy.get_name()))
     
 if __name__ == '__main__':
     try:
         ra = ReturnAction()
     except KeyboardInterrupt:
         sys.exit()
-        rospy.logerr('Interrupted!')
+        #rospy.logerr('Interrupted!')
     rospy.spin()

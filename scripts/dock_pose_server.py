@@ -36,7 +36,7 @@ def get_docking_pose(req):
     rospy.on_shutdown(shutdown_hook)
     topic = ['/vicon/'+cart_id+'/'+cart_id, 'geometry_msgs/TransformStamped']
     if(topic not in rospy.get_published_topics('/vicon/')):
-        rospy.logerr('Cart Topic Not Found!')
+        rospy.logerr('[ {} ]: Cart Topic Not Found!'.format(rospy.get_name()))
         return
     #print('Cart id pose being calculated for: {}'.format(cart_id)) ###
     while (True):
@@ -47,7 +47,7 @@ def get_docking_pose(req):
         #if (pose_updated == True):
         #rospy.loginfo('Cart vicon topic updated')
         rospy.sleep(1) # wait for cart topic subscribtion
-        print('Cart id Goal being calculated for is: {}'.format(goal)) ###
+        rospy.loginfo('[ {} ]: Cart id Goal is {}'.format(rospy.get_name(), cart_id))
         goal_rot = [goal.transform.rotation.x, goal.transform.rotation.y, goal.transform.rotation.z, goal.transform.rotation.w]
         goal_euler = tf_conversions.transformations.euler_from_quaternion(goal_rot)
         # offset from goal to gurantee proper docking
@@ -58,7 +58,7 @@ def get_docking_pose(req):
         goal_result.orientation.y = goal_rot[1]
         goal_result.orientation.z = goal_rot[2]
         goal_result.orientation.w = goal_rot[3]
-        rospy.loginfo('Docking Pose Calculated')
+        rospy.loginfo('[ {} ]: Docking Pose Calculated'.format(rospy.get_name()))
         return goal_result
         #else:
         #    rospy.loginfo('Cart vicon topic Not updated!')
@@ -73,10 +73,10 @@ def get_vicon_pose(data):
 
 def dock_pose_server():
     s = rospy.Service('/'+ROBOT_ID+'/get_docking_pose', dockPose, get_docking_pose)
-    rospy.loginfo('Docking Pose Calculation Ready')
- 
+    rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+
 def shutdown_hook():
-    rospy.logwarn('Dock Pose Server node shutdown by user')
+    rospy.logwarn('[ {} ]: node shutdown by user'.format(rospy.get_name()))
 
 if __name__ == "__main__":
     rospy.init_node('dock_pose_server')

@@ -38,7 +38,13 @@ class PickAction:
         self.status_flag = False # used to throttle further message sending after action execution
         self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
         rospy.loginfo('Waiting for move_base server')
-        self.act_client.wait_for_server() # wait for server start up
+        err_flag = False
+        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+            pass
+        else:
+            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))   
+            err_flag = True     
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
@@ -62,7 +68,10 @@ class PickAction:
         #rospy.set_param('/dynamic_reconf_server/home', True)
         #rospy.set_param('/dynamic_reconf_server/undock', True)
         rospy.sleep(1)
-        rospy.loginfo('Ready for Picking')
+        if not err_flag:
+            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+        else:
+            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
 
     def pick(self, data):
         """ Executes picking action. """
@@ -79,7 +88,7 @@ class PickAction:
                 dock_pose = self.calc_dock_position(self.cart_id)
                 #rospy.loginfo('Dock Pose coordinates: {}'.format(dock_pose))
                 if (dock_pose == None):
-                    rospy.logerr('Cart Topic Not Found!')
+                    #rospy.logerr('[ {} ]: Cart Topic Not Found!'.format(rospy.get_name()))
                     return
                 goal = MoveBaseGoal()
                 goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
@@ -90,8 +99,8 @@ class PickAction:
                 goal.target_pose.pose.orientation.y = dock_pose.orientation.y
                 goal.target_pose.pose.orientation.z = dock_pose.orientation.z
                 goal.target_pose.pose.orientation.w = dock_pose.orientation.w
-                rospy.loginfo('Sending Pick goal to action server') 
-                rospy.loginfo('Pick goal coordinates: {}'.format(goal))
+                rospy.loginfo('[ {} ]: Sending Goal to Action Server'.format(rospy.get_name())) 
+                #rospy.loginfo('Pick goal coordinates: {}'.format(goal))
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
                 reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
                 reset_costmaps()
@@ -101,7 +110,7 @@ class PickAction:
             else:
                 #self.act_client.cancel_goal()
                 #self.reconf_client.update_configuration({'pick': False})
-                rospy.logerr('Action Rejected! - Attempting to pick without undock or home')
+                rospy.logerr('[ {} ]: Action Rejected! - Attempting to pick without undock or home'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):
@@ -123,16 +132,16 @@ class PickAction:
 
     def calc_dock_position(self, cart_id):
         """ Calls a service to calculate the pick position infront of the desired cart. """
-        rospy.loginfo('Calculating Docking Position')
-        print('Cart id received is: {}'.format(cart_id)) ###
+        rospy.loginfo('[ {} ]: Calculating Docking Position'.format(rospy.get_name()))
+        #print('Cart id received is: {}'.format(cart_id))
         rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
             get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
             resp = get_goal_offset(cart_id, self.dock_distance)
-            rospy.loginfo('Calculating Docking Pose Service call Successful')
+            rospy.loginfo('[ {} ]: Calculating Docking Pose Service call Successful'.format(rospy.get_name()))
             return resp.dock_pose
         except rospy.ServiceException:
-            rospy.logerr('Calculating Docking Pose Service call Failed!')
+            rospy.logerr('[ {} ]: Calculating Docking Pose Service call Failed!'.format(rospy.get_name()))
 
     '''
     def dynamic_params_update(self, config):
@@ -147,7 +156,8 @@ class PickAction:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
-            print(status)
+            #print(status)
+            rospy.loginfo_throttle(1, '[ {} ] >>> Status: {} '.format(rospy.get_name, status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status
@@ -164,17 +174,17 @@ class PickAction:
                 #self.reconf_client.update_configuration({'pick': False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logerr('Execution Aborted by Move Base Server!')
+                rospy.logerr('[ {} ]: Execution Aborted by Move Base Server!'.format(rospy.get_name()))
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         self.act_client.cancel_all_goals()
-        rospy.logwarn('Pick Client node shutdown by user')
+        rospy.logwarn('[ {} ]: node shutdown by user'.format(rospy.get_name()))
     
 if __name__ == '__main__':
     try:
         pa = PickAction()
     except KeyboardInterrupt:
         sys.exit()
-        rospy.logerr('Interrupted!')
+        #rospy.logerr('Interrupted!')
     rospy.spin()

@@ -31,11 +31,11 @@ Connected = False
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
-        print('Connected to Broker')
+        rospy.loginfo('[ {} ]: Connected to Broker'.format(rospy.get_name()))
         global Connected                
         Connected = True                
     else:
-        print('Connection to Broker Failed!')
+        rospy.logerr('[ {} ]: Connection to Broker Failed!'.format(rospy.get_name()))
 
 def on_message(client, userdata, message):
     	#print 'on_message'
@@ -64,14 +64,15 @@ class CommandRouter:
         self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10) # topic to which the parsed action form the user is published
         rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update) # subscribes to downstream status messages
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        rospy.loginfo('Command Router Ready')
+        rospy.sleep(1)
+        rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
 
     def parse_data(self, client, userdata, message):
         """ Parses data sent by user via MQTT. """
         mqtt_msg = json.loads(message.payload)
         goal = Pose()
         if (mqtt_msg['robot_id'] == ROBOT_ID):
-            print ("Message received: "  + message.payload)
+            #print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
             cart_id = mqtt_msg['cart_id'] # cart to be picked
             command_id = str(mqtt_msg['command_id']) # string for syncing commands - not used 
@@ -87,6 +88,8 @@ class CommandRouter:
             goal.orientation.y = mqtt_msg['pose']['orientation']['y']
             goal.orientation.z = mqtt_msg['pose']['orientation']['z']
             goal.orientation.w = mqtt_msg['pose']['orientation']['w']
+            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n Action: {}, \n Cart ID: {}, \n Station ID: {}, \n Bound Mode: {}, \n Command ID: {}, \
+                \n Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, command_id, command_id)) # Goal Pose Not printed for convenience!
             self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp)
         else:
             pass
@@ -100,28 +103,28 @@ class CommandRouter:
     def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
         if (action== 'drive'):
-            rospy.loginfo('Drive Action Selected')
+            rospy.loginfo('[ {} ]: Drive Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'drive'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'dock'): 
-            rospy.loginfo('Dock Action Selected')
+            rospy.loginfo('[ {} ]: Dock Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'dock'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'undock'):
-            rospy.loginfo('Undock Action Selected')
+            rospy.loginfo('[ {} ]: Undock Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'undock'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'pick'):
-            rospy.loginfo('Pick Action Selected')
+            rospy.loginfo('[ {} ]: Pick Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'pick'
             msg.goal = goal
@@ -129,7 +132,7 @@ class CommandRouter:
             msg.cart_id = cart_id
             self.action_pub.publish(msg)
         if (action== 'place'):
-            rospy.loginfo('Place Action Selected')
+            rospy.loginfo('[ {} ]: Place Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'place'
             msg.goal = goal
@@ -138,33 +141,33 @@ class CommandRouter:
             msg.bound_mode = bound_mode # inbound, outbound, queue
             self.action_pub.publish(msg)
         if (action== 'home'):
-            rospy.loginfo('Home Action Selected')
+            rospy.loginfo('[ {} ]: Home Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'home'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         if (action== 'return'):
-            rospy.loginfo('Return Action Selected')
+            rospy.loginfo('[ {} ]: Return Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'return'
             msg.goal = goal
             msg.command_id = command_id
             self.action_pub.publish(msg)
         elif (action == 'cancelCurrent'): # cancel current active goal
-            rospy.loginfo('cancelCurrent Action Selected')
+            rospy.loginfo('[ {} ]: cancelCurrent Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'cancelCurrent'
             msg.command_id = command_id
             self.action_pub.publish(msg)
         elif (action == 'cancelAll'): # cancel all goals
-            rospy.loginfo('cancelAll Action Selected')
+            rospy.loginfo('[ {} ]: cancelAll Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'cancelAll'
             msg.command_id = command_id
             self.action_pub.publish(msg)
         elif (action == 'cancelAtAndBefore'): # cancel goals at and before a certain timestamp
-            rospy.loginfo('cancelAtAndBefore Action Selected')
+            rospy.loginfo('[ {} ]: cancelAtAndBefore Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'cancelAtAndBefore'
             msg.command_id = command_id
@@ -191,13 +194,13 @@ class CommandRouter:
         else: msg.response = 'free'
         '''
         msg_json = self.msg2json(msg)
-        rospy.loginfo_throttle(2, 'sending status data via mqtt')
+        #rospy.loginfo_throttle(1, '{}: Sending status data via mqtt'.format(rospy.get_name()))
      	client.publish('/robotnik/mqtt_ros_info',msg_json)
 
     def shutdown_hook(self):
         """ Shutdown callback function. """
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
-        rospy.logwarn('Command Router node shutdown by user')
+        rospy.logwarn('[ {} ]: node shutdown by user'.format(rospy.get_name()))
 
 
 if __name__ == '__main__':
@@ -205,6 +208,6 @@ if __name__ == '__main__':
         cr = CommandRouter()
     except KeyboardInterrupt:
         sys.exit()
-        print('Interrupted!')
+        #print('Interrupted!')
     rospy.spin()
 

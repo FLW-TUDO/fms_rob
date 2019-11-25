@@ -38,8 +38,14 @@ class PlaceAction:
         rospy.init_node('place_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
         self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
-        rospy.loginfo('Waiting for move_base server')
-        self.act_client.wait_for_server()  # wait for server start up
+        rospy.loginfo('[ {} ]: Waiting for move_base server'.format(rospy.get_name()))
+        err_flag = False
+        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+            pass
+        else:
+            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))  
+            err_flag = True      
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
@@ -51,8 +57,10 @@ class PlaceAction:
         #self.dock_flag = Bool()
         #self.dock_flag = True
         rospy.sleep(1)
-        rospy.loginfo('Ready for Placing')
-
+        if not err_flag:
+            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+        else:
+            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
     def place(self, data):
         """ Executes the placing operation. """
         if (data.action == 'place'):
@@ -63,12 +71,12 @@ class PlaceAction:
             dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
             if (dock_flag == True):
                 parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
-                rospy.loginfo('Calculated parking spots for placing: {}'.format(parking_spots))
+                rospy.loginfo('[ {} ]: Calculated parking spots for placing are {}'.format(rospy.get_name(), parking_spots))
                 goal = MoveBaseGoal()
                 goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
                 goal.target_pose.header.stamp = rospy.Time.now()
                 if (parking_spots == None):
-                    rospy.logerr('Station Topic Not Found!')
+                    #rospy.logerr('Station Topic Not Found!')
                     return
                 if (self.bound_mode == 'inbound'):
                     goal.target_pose.pose.position.x = parking_spots.inbound.pose.position.x
@@ -91,7 +99,7 @@ class PlaceAction:
                     goal.target_pose.pose.orientation.y = parking_spots.queue.pose.orientation.y
                     goal.target_pose.pose.orientation.z = parking_spots.queue.pose.orientation.z
                     goal.target_pose.pose.orientation.w = parking_spots.queue.pose.orientation.w
-                rospy.loginfo('Sending Place goal to action server') 
+                rospy.loginfo('[ {} ]: Sending Place goal to action server'.format(rospy.get_name())) 
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
                 reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
                 reset_costmaps()
@@ -99,7 +107,7 @@ class PlaceAction:
                 self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
             else:
-                rospy.logerr('Action Rejected! - Attempting to place without dock')
+                rospy.logerr('[ {} ]: Action Rejected! - Attempting to place without dock'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):
@@ -124,14 +132,14 @@ class PlaceAction:
         Calls a service to Calculate the location of 3 parking spots next to the workstation
         (inbound - outbound - queue)
         """
-        rospy.loginfo('Calculating Parking Spots')
+        rospy.loginfo('[ {} ]: Calculating Parking Spots'.format(rospy.get_name()))
         rospy.wait_for_service('/'+ROBOT_ID+'/get_parking_spots')
         try:
             get_park_spots = rospy.ServiceProxy('/'+ROBOT_ID+'/get_parking_spots', parkPose)
             resp = get_park_spots(station_id, park_distance)
             return resp
         except rospy.ServiceException:
-            rospy.logerr('Calculating Docking Position Service call Failed!')
+            rospy.logerr('[ {} ]: Calculating Docking Position Service call Failed!'.format(rospy.get_name()))
 
     '''
     def dynamic_params_update(self, config):
@@ -145,7 +153,8 @@ class PlaceAction:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
-            print(status)
+            #print(status)
+            rospy.loginfo_throttle(1, '[ {} ] >>> Status: {} '.format(rospy.get_name, status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status
@@ -165,17 +174,17 @@ class PlaceAction:
                 #self.reconf_client.update_configuration({"dock": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logerr('Execution Aborted by Move Base Server!')               
+                rospy.logerr('[ {} ]: Execution Aborted by Move Base Server!'.format(rospy.get_name()))               
 
     def shutdown_hook(self):
         self.klt_num_pub.publish('')  # resets the picked up cart number in the ros_mocap package
         self.act_client.cancel_all_goals()
-        rospy.logwarn('Place Client node shutdown by user')
+        rospy.logwarn('[ {} ]: node shutdown by user'.format(rospy.get_name()))
     
 if __name__ == '__main__':
     try:
         pa = PlaceAction()
     except KeyboardInterrupt:
         sys.exit()
-        rospy.logerr('Interrupted!')
+        #rospy.logerr('Interrupted!')
     rospy.spin()
