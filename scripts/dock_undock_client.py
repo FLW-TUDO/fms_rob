@@ -156,8 +156,8 @@ class DUActionClient:
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
-                #self.reconf_client.update_configuration({"pick": False})
-                #self.reconf_client.update_configuration({"return": False})
+                self.reconf_client.update_configuration({"pick": False})
+                self.reconf_client.update_configuration({"return": False})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('[ {} ]: Execution Aborted by Dock-Undock Server!'.format(rospy.get_name()))
