@@ -174,6 +174,7 @@ class CommandRouter:
             msg.cancellation_stamp = cancellation_stamp
             self.action_pub.publish(msg)
         else:
+            rospy.logerr('[ {} ]: Action Not Recognized!'.format(rospy.get_name()))
             pass
 
     def status_mapping_update(self, data):
