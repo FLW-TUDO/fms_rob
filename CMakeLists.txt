@@ -4,7 +4,7 @@ project(fms_rob)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS std_msgs message_generation geometry_msgs nav_msgs actionlib_msgs actionlib dynamic_reconfigure)
+find_package(catkin REQUIRED COMPONENTS std_msgs message_generation geometry_msgs nav_msgs actionlib_msgs actionlib dynamic_reconfigure costmap_converter)
 
 
 #######################################
