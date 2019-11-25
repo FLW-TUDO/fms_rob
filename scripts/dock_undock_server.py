@@ -61,7 +61,7 @@ class DUActionServer:
         except:
             rospy.logerr('TEB Planner is Not running!')
         ''' P-Controller settings for primary motion '''
-        self.move_speed = 0.12 #0.14
+        self.move_speed = 0.09 #0.14
         #self.move_kp = 0.99 #0.99
         #self.rot_kp = 0.99 #0.99
         self.rot_speed = 0.57 #0.5
@@ -71,6 +71,7 @@ class DUActionServer:
         self.result = dockUndockResult()
         ''' PD-Controller settings for secondary move '''
         self.error_theta = 1.0 #1.0
+        #self.theta_tolerance = 0.007 #0.007
         self.theta_tolerance = 0.02
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
@@ -392,7 +393,7 @@ class DUActionServer:
         """ PD controller output calculation. """
         current_time = None
         self.error_theta = self.goal_angle(goal_x, goal_y) - self.curr_theta
-        self.error_theta = atan2(sin(self.error_theta), cos(self.error_theta)) #### ?
+        self.error_theta = atan2(sin(self.error_theta), cos(self.error_theta)) # angle sign regulation
         #self.theta_msg = self.error_theta
         self.current_time = current_time if current_time is not None else time.time()
         delta_time = self.current_time - self.last_time
