@@ -61,11 +61,11 @@ class DUActionServer:
         except:
             rospy.logerr('TEB Planner is Not running!')
         ''' P-Controller settings for primary motion '''
-        self.move_speed = 0.09 #0.14
-        #self.move_kp = 0.99 #0.99
+        #self.move_speed = 0.09 #0.14
+        self.move_kp = 0.99 #0.99
         #self.rot_kp = 0.99 #0.99
         self.rot_speed = 0.57 #0.5
-        self.move_tolerance = 0.005 #0.005
+        self.move_tolerance = 0.007 #0.005
         self.ang_tolerance = 0.002 #0.002
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
@@ -200,7 +200,7 @@ class DUActionServer:
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
-        rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached')
+        rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
         r = rospy.Rate(10)
         while(abs(self.calc_cart_theta() - self.curr_theta) >= self.orientation_tolerance):
             if (self.du_server.is_preempt_requested()):
@@ -231,15 +231,15 @@ class DUActionServer:
         vel_msg = Twist()
         r = rospy.Rate(10)
         #rospy.loginfo('Current Odom value{}'.format(abs(self.odom_coor.position.x)))
-        rospy.loginfo('[ {} ]: Moving under Cart') # periodic logging
-        while(abs(self.odom_coor.position.x) < distance):
-        #while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
+        rospy.loginfo('[ {} ]: Moving under Cart'.format(rospy.get_name())) # periodic logging
+        #while(abs(self.odom_coor.position.x) < distance):
+        while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
                 rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
                 success = False
                 return success
-            vel_msg.linear.x = self.move_speed #(distance - abs(self.odom_coor.position.x))*self.move_kp
+            vel_msg.linear.x = (distance - abs(self.odom_coor.position.x))*self.move_kp #self.move_speed
             vel_msg.angular.z = 0
             self.vel_pub.publish(vel_msg)
             self.feedback.odom_data = self.odom_data

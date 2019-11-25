@@ -29,7 +29,7 @@ class DriveAction:
     def __init__(self):
         rospy.init_node('drive_action_client')
         self.status_flag = False # used to throttle further message sending after action execution
-        self.act_client = actionlib.SimpleActionClient('rb1_base_b/move_base', MoveBaseAction) 
+        self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
         err_flag = False
         if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
             #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
@@ -46,7 +46,7 @@ class DriveAction:
             rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
         else:
             rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
-            
+
     def drive(self, data):
         """ Executes the drive action. """
         self.command_id = data.command_id
@@ -90,7 +90,7 @@ class DriveAction:
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
             #print(status)
-            rospy.loginfo_throttle(1, '[ {} ] >>> Status: {} '.format(rospy.get_name, status))
+            rospy.loginfo('[ {} ] >>> Status: {} '.format(rospy.get_name(), status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status

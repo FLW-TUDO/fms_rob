@@ -136,7 +136,7 @@ class DUActionClient:
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
             #print(status)
-            rospy.loginfo_throttle(1, '[ {} ] >>> Status: {} '.format(rospy.get_name, status))
+            rospy.loginfo('[ {} ] >>> Status: {} '.format(rospy.get_name(), status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status
