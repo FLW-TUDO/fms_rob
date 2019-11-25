@@ -88,8 +88,9 @@ class CommandRouter:
             goal.orientation.y = mqtt_msg['pose']['orientation']['y']
             goal.orientation.z = mqtt_msg['pose']['orientation']['z']
             goal.orientation.w = mqtt_msg['pose']['orientation']['w']
-            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n Action: {}, \n Cart ID: {}, \n Station ID: {}, \n Bound Mode: {}, \n Command ID: {}, \
-                \n Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, command_id, command_id)) # Goal Pose Not printed for convenience!
+            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n\t Action: {}, \n\t Cart ID: {}, \n\t Station ID: {}, \n\t Bound Mode: {}, \n\t Command ID: {}, \
+                \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, command_id, command_id)) # Goal Pose Not printed for convenience!
+            self.control_flag = False
             self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp)
         else:
             pass
@@ -102,36 +103,40 @@ class CommandRouter:
 
     def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
-        if (action== 'drive'):
+        if (action == 'drive'):
             rospy.loginfo('[ {} ]: Drive Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'drive'
             msg.goal = goal
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        if (action== 'dock'): 
+        if (action == 'dock'): 
             rospy.loginfo('[ {} ]: Dock Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'dock'
             msg.goal = goal
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        if (action== 'undock'):
+        if (action == 'undock'):
             rospy.loginfo('[ {} ]: Undock Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'undock'
             msg.goal = goal
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        if (action== 'pick'):
+        if (action == 'pick'):
             rospy.loginfo('[ {} ]: Pick Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'pick'
             msg.goal = goal
             msg.command_id = command_id
             msg.cart_id = cart_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        if (action== 'place'):
+        if (action == 'place'):
             rospy.loginfo('[ {} ]: Place Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'place'
@@ -139,43 +144,49 @@ class CommandRouter:
             msg.command_id = command_id
             msg.station_id = station_id
             msg.bound_mode = bound_mode # inbound, outbound, queue
+            self.control_flag = True
             self.action_pub.publish(msg)
-        if (action== 'home'):
+        if (action == 'home'):
             rospy.loginfo('[ {} ]: Home Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'home'
             msg.goal = goal
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        if (action== 'return'):
+        if (action == 'return'):
             rospy.loginfo('[ {} ]: Return Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'return'
             msg.goal = goal
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        elif (action == 'cancelCurrent'): # cancel current active goal
+        if (action == 'cancelCurrent'): # cancel current active goal
             rospy.loginfo('[ {} ]: cancelCurrent Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'cancelCurrent'
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        elif (action == 'cancelAll'): # cancel all goals
+        if (action == 'cancelAll'): # cancel all goals
             rospy.loginfo('[ {} ]: cancelAll Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'cancelAll'
             msg.command_id = command_id
+            self.control_flag = True
             self.action_pub.publish(msg)
-        elif (action == 'cancelAtAndBefore'): # cancel goals at and before a certain timestamp
+        if (action == 'cancelAtAndBefore'): # cancel goals at and before a certain timestamp
             rospy.loginfo('[ {} ]: cancelAtAndBefore Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'cancelAtAndBefore'
             msg.command_id = command_id
             msg.cancellation_stamp = cancellation_stamp
+            self.control_flag = True
             self.action_pub.publish(msg)
-        else:
+        elif (not self.control_flag):
             rospy.logerr('[ {} ]: Action Not Recognized!'.format(rospy.get_name()))
-            pass
+            return
 
     def status_mapping_update(self, data):
         """ Publishes status messages back to user via MQTT. """
