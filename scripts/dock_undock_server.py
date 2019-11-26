@@ -201,38 +201,6 @@ class DUActionServer:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
-        # r = rospy.Rate(10)
-        # print('Theta error: {}'.format(self.calc_cart_theta() - self.curr_theta))
-        # print('Cart theta is: {}'.format(self.calc_cart_theta()))
-        # print('Robot theta is: {}'.format(self.curr_theta))  
-        # control_flag = False 
-        # #while(abs(self.calc_cart_theta() - self.curr_theta) >= self.orientation_tolerance):  
-        # while(abs(abs(self.calc_cart_theta()) - abs(self.curr_theta)) >= self.orientation_tolerance):
-        # #while not ((self.calc_cart_theta() - self.curr_theta) < self.orientation_tolerance and (self.calc_cart_theta() - self.curr_theta) > -1*self.orientation_tolerance):
-        #     if (self.du_server.is_preempt_requested()):
-        #         self.du_server.set_preempted()
-        #         rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
-        #         success = False
-        #         return success
-        #     cart_theta = self.calc_cart_theta()
-        #     robot_theta = self.curr_theta
-        #     vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
-        #     if (self.curr_theta > 0 and self.calc_cart_theta() < 0):
-        #         vel_msg.angular.z = -1*(cart_theta + robot_theta)*self.kp_orient
-        #         print('First condition // angular vel: {}'.format(vel_msg.angular.z))
-        #     print('Theta error: {}'.format(self.calc_cart_theta() - self.curr_theta))
-        #     print('Cart theta is: {}'.format(cart_theta))
-        #     print('Robot theta is: {}'.format(robot_theta))
-        #     control_flag = True
-        #     self.vel_pub.publish(vel_msg)
-        #     r.sleep()
-        # if (not control_flag):
-        #     rospy.logerr('[ {} ]: Adjusting Secondary Goal Orientation Failed!'.format(rospy.get_name()))
-        #     success = False
-        #     return
-        #print('Theta error: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
-        #print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
-        #print('Robot theta is: {}'.format(self.mapping(self.curr_theta))) 
         r = rospy.Rate(10) 
         orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi) 
         while(abs(orientation_error) >= self.orientation_tolerance):
@@ -251,10 +219,6 @@ class DUActionServer:
                 orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi)
             else:
                 orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta))
-            #print('Orientation error 2: {}'.format(orientation_error))
-            #print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
-            #print('Robot theta is: {}'.format(self.mapping(self.curr_theta)))
-            #print('Angular Vel: {}'.format(vel_msg.angular.z))
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
