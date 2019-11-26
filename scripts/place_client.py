@@ -164,6 +164,8 @@ class PlaceAction:
             msg.bound_mode = self.bound_mode
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
+                rospy.loginfo('[ {} ]: Place Action Successful'.format(rospy.get_name()))
+                print('--------------------------------')
                 #self.reconf_client.update_configuration({"dock": False})
                 self.reconf_client.update_configuration({"place": True})
                 #self.reconf_client.update_configuration({"dock": False})

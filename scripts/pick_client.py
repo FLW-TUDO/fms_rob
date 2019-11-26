@@ -166,6 +166,8 @@ class PickAction:
             msg.cart_id = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
+                rospy.loginfo('[ {} ]: Pick Action Successful'.format(rospy.get_name()))
+                print('--------------------------------')
                 self.reconf_client.update_configuration({'pick': True})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False

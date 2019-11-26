@@ -147,6 +147,8 @@ class ReturnAction:
             #msg.cart_id = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful
+                rospy.loginfo('[ {} ]: Return Action Successful'.format(rospy.get_name()))
+                print('--------------------------------')
                 self.reconf_client.update_configuration({"return": True})
                 self.reconf_client.update_configuration({"place": False})
                 self.reconf_client.update_configuration({"dock": False})

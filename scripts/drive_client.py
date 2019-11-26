@@ -98,9 +98,15 @@ class DriveAction:
             msg.action = self.action # to be removed after msg modification
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful
+                rospy.loginfo('[ {} ]: Drive Action Successful'.format(rospy.get_name()))
+                print('--------------------------------')
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
+            if (status == 4): # if action execution is aborted
+                self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logerr('[ {} ]: Execution Aborted by Dock-Undock Server!'.format(rospy.get_name()))
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package

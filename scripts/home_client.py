@@ -129,6 +129,8 @@ class HomeAction:
             msg.action = self.action # to be removed after msg modification
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
+                rospy.loginfo('[ {} ]: Home Action Successful'.format(rospy.get_name()))
+                print('--------------------------------')
                 self.reconf_client.update_configuration({"home": True})
                 self.reconf_client.update_configuration({"pick": False})
                 self.reconf_client.update_configuration({"undock": False})
