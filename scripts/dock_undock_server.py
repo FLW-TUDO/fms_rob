@@ -75,7 +75,7 @@ class DUActionServer:
         #self.theta_tolerance = 0.02
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
-        self.kp_orient = 0.15 #0.3
+        self.kp_orient = 0.2 #0.3
         self.kp_trans = 0.8 #0.8
         self.distance_tolerance = 0.003 #0.003
         self.orientation_tolerance = 0.01 #0.02
@@ -201,7 +201,11 @@ class DUActionServer:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
+        print('Theta error: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
+        print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
+        print('Robot theta is: {}'.format(self.mapping(self.curr_theta))) 
         r = rospy.Rate(10) 
+        control_flag = False
         orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi) 
         while(abs(orientation_error) >= self.orientation_tolerance):
             if (self.du_server.is_preempt_requested()):
@@ -211,16 +215,19 @@ class DUActionServer:
                 return success
             #if ((self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) > 3.2): #
             #print('Orientation error 1: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
-            if (orientation_error > 0):
-                vel_msg.angular.z = orientation_error*self.kp_orient
-            else:
-                vel_msg.angular.z = -1*orientation_error*self.kp_orient
-            if (orientation_error > pi):
-                orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi)
-            else:
-                orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta))
+            orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi)
+            vel_msg.angular.z = -1*orientation_error*self.kp_orient
+            print('Orientation error: {}'.format(orientation_error))
+            print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
+            print('Robot theta is: {}'.format(self.mapping(self.curr_theta)))
+            print('Angular Vel: {}'.format(vel_msg.angular.z))
             self.vel_pub.publish(vel_msg)
+            control_flg = True
             r.sleep()
+        if (not control_flag):
+            success = False
+            rospy.logwarn('[ {} ]: Goal Orientation Not modified!'.format(rospy.get_name()))
+            return success
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
@@ -409,6 +416,9 @@ class DUActionServer:
         current_time = None
         self.error_theta = self.goal_angle(goal_x, goal_y) - self.curr_theta
         self.error_theta = atan2(sin(self.error_theta), cos(self.error_theta)) # angle sign regulation
+        print('Goal angle: {}'.format(self.goal_angle(goal_x, goal_y)))
+        print('Current angle: {}'.format(self.curr_theta))
+        print('Error angle: {}'.format(self.error_theta))
         #self.theta_msg = self.error_theta
         self.current_time = current_time if current_time is not None else time.time()
         delta_time = self.current_time - self.last_time
