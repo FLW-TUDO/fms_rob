@@ -222,7 +222,7 @@ class DUActionServer:
             print('Robot theta is: {}'.format(self.mapping(self.curr_theta)))
             print('Angular Vel: {}'.format(vel_msg.angular.z))
             self.vel_pub.publish(vel_msg)
-            control_flg = True
+            control_flag = True
             r.sleep()
         if (not control_flag):
             success = False
