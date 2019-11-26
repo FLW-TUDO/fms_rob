@@ -75,10 +75,10 @@ class DUActionServer:
         #self.theta_tolerance = 0.02
         self.kp_ang = 0.7 #0.7
         self.kd_ang = 0.1 #0.1
-        self.kp_orient = 0.25 #0.3
+        self.kp_orient = 0.7 #0.3
         self.kp_trans = 0.8 #0.8
         self.distance_tolerance = 0.003 #0.003
-        self.orientation_tolerance = 0.02 #0.02
+        self.orientation_tolerance = 0.01 #0.02
         current_time = None
         self.sample_time = 0.0001
         self.current_time = current_time if current_time is not None else time.time()
@@ -201,28 +201,60 @@ class DUActionServer:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
-        r = rospy.Rate(10)
-        while(abs(self.calc_cart_theta() - self.curr_theta) >= self.orientation_tolerance):
-        #while not ((self.calc_cart_theta() - self.curr_theta) < self.orientation_tolerance and (self.calc_cart_theta() - self.curr_theta) > -1*self.orientation_tolerance):
+        # r = rospy.Rate(10)
+        # print('Theta error: {}'.format(self.calc_cart_theta() - self.curr_theta))
+        # print('Cart theta is: {}'.format(self.calc_cart_theta()))
+        # print('Robot theta is: {}'.format(self.curr_theta))  
+        # control_flag = False 
+        # #while(abs(self.calc_cart_theta() - self.curr_theta) >= self.orientation_tolerance):  
+        # while(abs(abs(self.calc_cart_theta()) - abs(self.curr_theta)) >= self.orientation_tolerance):
+        # #while not ((self.calc_cart_theta() - self.curr_theta) < self.orientation_tolerance and (self.calc_cart_theta() - self.curr_theta) > -1*self.orientation_tolerance):
+        #     if (self.du_server.is_preempt_requested()):
+        #         self.du_server.set_preempted()
+        #         rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
+        #         success = False
+        #         return success
+        #     cart_theta = self.calc_cart_theta()
+        #     robot_theta = self.curr_theta
+        #     vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
+        #     if (self.curr_theta > 0 and self.calc_cart_theta() < 0):
+        #         vel_msg.angular.z = -1*(cart_theta + robot_theta)*self.kp_orient
+        #         print('First condition // angular vel: {}'.format(vel_msg.angular.z))
+        #     print('Theta error: {}'.format(self.calc_cart_theta() - self.curr_theta))
+        #     print('Cart theta is: {}'.format(cart_theta))
+        #     print('Robot theta is: {}'.format(robot_theta))
+        #     control_flag = True
+        #     self.vel_pub.publish(vel_msg)
+        #     r.sleep()
+        # if (not control_flag):
+        #     rospy.logerr('[ {} ]: Adjusting Secondary Goal Orientation Failed!'.format(rospy.get_name()))
+        #     success = False
+        #     return
+        #print('Theta error: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
+        #print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
+        #print('Robot theta is: {}'.format(self.mapping(self.curr_theta))) 
+        r = rospy.Rate(10) 
+        orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi) 
+        while(abs(orientation_error) >= self.orientation_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
                 rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
                 success = False
                 return success
-            #if (self.curr_theta > 0 and self.calc_cart_theta() < 0):
-                #if ((self.curr_theta <= (-1*self.calc_cart_theta() + self.ang_tolerance)) and (self.curr_theta >= (-1*self.calc_cart_theta() - self.ang_tolerance))):
-                    #break
-                #elif ():
-                #    break
-            cart_theta = self.calc_cart_theta()
-            robot_theta = self.curr_theta
-            vel_msg.angular.z = (cart_theta - robot_theta)*self.kp_orient
-            if (self.curr_theta > 0 and self.calc_cart_theta() < 0): # solves extra rotation bug which is due to sign values difference
-                vel_msg.angular.z = (cart_theta + robot_theta)*self.kp_orient
-                print('First condition // angular vel: {}'.format(vel_msg.angular.z))
-            print('Theta error: {}'.format(self.calc_cart_theta() - self.curr_theta))
-            print('Cart theta is: {}'.format(cart_theta))
-            print('Robot theta is: {}'.format(robot_theta))
+            #if ((self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) > 3.2): #
+            #print('Orientation error 1: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
+            if (orientation_error > 0):
+                vel_msg.angular.z = orientation_error*self.kp_orient
+            else:
+                vel_msg.angular.z = -1*orientation_error*self.kp_orient
+            if (orientation_error > pi):
+                orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi)
+            else:
+                orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta))
+            #print('Orientation error 2: {}'.format(orientation_error))
+            #print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
+            #print('Robot theta is: {}'.format(self.mapping(self.curr_theta)))
+            #print('Angular Vel: {}'.format(vel_msg.angular.z))
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
@@ -328,9 +360,17 @@ class DUActionServer:
         self.reconf_client.update_configuration({"return_pose_rot_x": self.cart_pose_rot[0]})  
         self.reconf_client.update_configuration({"return_pose_rot_y": self.cart_pose_rot[1]})  
         self.reconf_client.update_configuration({"return_pose_rot_z": self.cart_pose_rot[2]})  
-        self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})     
-    
+        self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})    
 
+    def mapping(self, value, leftMin=-pi, leftMax=pi, rightMin=0, rightMax=2*pi):
+        # Figure out how 'wide' each range is
+        leftSpan = leftMax - leftMin
+        rightSpan = rightMax - rightMin
+        # Convert the left range into a 0-1 range (float)
+        valueScaled = float(value - leftMin) / float(leftSpan)
+        # Convert the 0-1 range into a value in the right range.
+        return rightMin + (valueScaled * rightSpan) 
+    
     def get_odom(self, data):
         """ Obtains current odom readings. """
         self.odom_data = data   
