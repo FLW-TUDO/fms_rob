@@ -8,11 +8,11 @@ import tf_conversions
 
 class test:
     def __init__(self):  
-        rospy.init_node('test')
+        rospy.init_node('test2')
         ROBOT_ID = 'rb1_base_b'
         cart_id = 'KLT_3_neu'
-        rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.robot_pose)
-        #rospy.Subscriber('/vicon/'+cart_id+'/'+cart_id, TransformStamped, self.cart_pose)
+        #rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.robot_pose)
+        rospy.Subscriber('/vicon/'+cart_id+'/'+cart_id, TransformStamped, self.cart_pose)
         rospy.sleep(2)
 
     def robot_pose(self, data):
@@ -22,11 +22,9 @@ class test:
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
         robot_theta = rot_euler[2]
-        #robot_theta = (self.mapping(robot_theta))
+        #robot_theta = (self.mapping(robot_theta)) / (2*pi)
         print('Robot Theta: {}'.format(robot_theta))
-        #error = (self.cart_theta - robot_theta) 
-        #error = self.mapping(error)
-        #print('Error Theta: {}'.format(error))
+        #rospy.sleep(0.2)
 
     def cart_pose(self, data):
         """ Robot vicon pose update. """
@@ -34,9 +32,10 @@ class test:
         #cart_theta_pose_trans_y = data.transform.translation.y
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
-        self.cart_theta = rot_euler[2]
-        #cart_theta = (self.mapping(cart_theta)) / (2*pi)
-        #print('Cart Theta: {}'.format(cart_theta))
+        cart_theta = rot_euler[2]
+        #cart_theta = (self.mapping(cart_theta))
+        print('Cart Theta: {}'.format(cart_theta))
+        #rospy.sleep(0.2)
 
     def mapping(self, value, leftMin=-pi, leftMax=pi, rightMin=0, rightMax=2*pi):
         # Figure out how 'wide' each range is
@@ -50,5 +49,4 @@ class test:
 
 if __name__ == '__main__':
     test()
-    rospy.sleep(2)
     rospy.spin()

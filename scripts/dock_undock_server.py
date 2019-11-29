@@ -49,7 +49,6 @@ class DUActionServer:
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
         self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         try:
@@ -64,19 +63,19 @@ class DUActionServer:
         #self.move_speed = 0.09 #0.14
         self.move_kp = 0.99 #0.99
         #self.rot_kp = 0.99 #0.99
-        self.rot_speed = 0.4 #0.5
+        #self.rot_speed = 0.4 #0.5
         self.move_tolerance = 0.007 #0.005
-        self.ang_tolerance = 0.002 #0.002
+        #self.ang_tolerance = 0.002 #0.002
         self.feedback = dockUndockFeedback()
         self.result = dockUndockResult()
         ''' PD-Controller settings for secondary move '''
         self.error_theta = 1.0 #1.0
         #self.theta_tolerance = 0.007 #0.007
         #self.theta_tolerance = 0.02
-        self.kp_ang = 0.7 #0.7
+        self.kp_ang = 0.7 #0.7 
         self.kd_ang = 0.1 #0.1
-        self.kp_orient = 0.2 #0.3
-        self.kp_trans = 0.8 #0.8
+        self.kp_orient = 0.6 #0.3
+        self.kp_trans = 0.8 #0.8    ######
         self.distance_tolerance = 0.003 #0.003
         self.orientation_tolerance = 0.01 #0.02
         current_time = None
@@ -95,8 +94,17 @@ class DUActionServer:
         rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
 
     def execute(self, goal):
-        rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id
+        self.control_flag = False
+        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
         rospy.sleep(1)
+        # while (self.control_flag == False):
+        #     print('waiting for cart id subscribtion')
+        #     rospy.sleep(0.2)
+        #print(self.cart_id)
+        #print('Cart Vicon Topic: {}'.format('/vicon/'+self.cart_id+'/'+self.cart_id))
+        self.cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id pose
+        rospy.sleep(1)
+        #print('Cart Pos: ({}, {})'.format(self.cart_pose_trans[0], self.cart_pose_trans[1]))
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode # docking or undocking
@@ -113,10 +121,13 @@ class DUActionServer:
                 success_odom_reset = self.reset_odom()
             if (success_odom_reset):
                 success_move = self.do_du_move(dock_distance/2.0) # move under cart
-            self.save_cart_pose() 
+                self.save_cart_pose() 
+                rospy.sleep(0.2)
             if (success_move):
                 success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             if (success_elev):
+                self.rot_speed = 0.7 #0.5
+                self.ang_tolerance = 0.02 #0.002
                 success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
             if (success_move and success_elev and success_rotate and success_odom_reset and success_se_move):
                 self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
@@ -136,6 +147,8 @@ class DUActionServer:
             if (success_elev):
                 success_odom_reset = self.reset_odom()
             if (success_odom_reset):
+                self.rot_speed = 0.3 #0.5
+                self.ang_tolerance = 0.002 #0.00
                 success_rotate = self.do_du_rotate(dock_angle) 
             if (success_rotate):
                 success_move = self.do_du_move(dock_distance)
@@ -178,7 +191,8 @@ class DUActionServer:
         rospy.sleep(0.2)
         vel_msg = Twist()
         rospy.loginfo('[ {} ]: Navigating to Secondary Goal'.format(rospy.get_name()))
-        goal = self.calc_se_dock_position(distance)
+        se_distance = distance / 2.0
+        goal = self.calc_se_dock_position(se_distance)  ### to be updated as user defined ratio
         goal_x = goal[0]
         goal_y = goal[1]
         r = rospy.Rate(10)
@@ -188,49 +202,87 @@ class DUActionServer:
                 rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
                 success = False
                 return success
-            vel_msg.linear.x = self.euclidean_distance(goal_x, goal_y)*self.kp_trans
+            vel_msg.linear.x = self.euclidean_distance(goal_x, goal_y) * self.kp_trans
+            #print('Euclidean Distance: {}'.format(self.euclidean_distance(goal_x, goal_y)))
             vel_msg.linear.y = 0
             vel_msg.linear.z = 0
             # Angular velocity in the z-axis.
             vel_msg.angular.x = 0
             vel_msg.angular.y = 0
-            vel_msg.angular.z = self.angular_vel(goal_x, goal_y)
+            vel_msg.angular.z = self.angular_vel(goal_x, goal_y)#
+            #print('Angular Vel: {}'.format(self.angular_vel(goal_x, goal_y)))
+            #print('-----------')
             self.vel_pub.publish(vel_msg)
             r.sleep()
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
-        print('Theta error: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
-        print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
-        print('Robot theta is: {}'.format(self.mapping(self.curr_theta))) 
+        # print('Theta error: {}'.format((self.calc_cart_theta()) - self.curr_theta))
+        # print('Cart theta is: {}'.format(self.calc_cart_theta()))
+        # print('Robot theta is: {}'.format(self.curr_theta))
         r = rospy.Rate(10) 
-        control_flag = False
-        orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi) 
-        while(abs(orientation_error) >= self.orientation_tolerance):
-            if (self.du_server.is_preempt_requested()):
-                self.du_server.set_preempted()
-                rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
-                success = False
-                return success
-            #if ((self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) > 3.2): #
-            #print('Orientation error 1: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
-            orientation_error = (self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) / (2*pi)
-            vel_msg.angular.z = -1*orientation_error*self.kp_orient
-            print('Orientation error: {}'.format(orientation_error))
-            print('Cart theta is: {}'.format(self.mapping(self.calc_cart_theta())))
-            print('Robot theta is: {}'.format(self.mapping(self.curr_theta)))
-            print('Angular Vel: {}'.format(vel_msg.angular.z))
+        # control_flag = False
+        # orientation_error = self.curr_theta - self.calc_cart_theta()
+        # while(abs(orientation_error) >= self.orientation_tolerance):
+        #     if (self.du_server.is_preempt_requested()):
+        #         self.du_server.set_preempted()
+        #         rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
+        #         success = False
+        #         return success
+        #     #if ((self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) > 3.2): #
+        #     #print('Orientation error 1: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
+        #     #if (self.curr_theta <= self.calc_cart_theta()):
+        #     #    orientation_error = self.calc_cart_theta() - self.curr_theta
+        #     #else:
+        #     cart_theta = self.calc_cart_theta()
+        #     robot_theta = self.curr_theta
+        #     orientation_error = (robot_theta - cart_theta)
+        #     # if (orientation_error > 3.14):
+        #     #     orientation_error = 3.14
+        #     # elif (orientation_error < 3.14):
+        #     #     orientation_error = -3.14
+        #     # if (robot_theta > 0 and cart_theta < 0):
+        #     #     vel_msg.angular.z = orientation_error * self.kp_orient
+        #     # if (robot_theta < 0 and cart_theta > 0):
+        #     #     vel_msg.angular.z = -1 * orientation_error * self.kp_orient
+        #     # if (robot_theta > 0 and cart_theta > 0):
+        #     #     if (orientation_error > 0):
+        #     #         vel_msg.angular.z = orientation_error * self.kp_orient
+        #     #     else:
+        #     #         vel_msg.angular.z = -1 * orientation_error * self.kp_orient
+        #     # if (robot_theta < 0 and cart_theta < 0):
+        #     #     if (orientation_error < 0):
+        #     #         vel_msg.angular.z =  -1 * orientation_error * self.kp_orient
+        #     #     else:
+        #     #         vel_msg.angular.z = orientation_error * self.kp_orient
+        #     # if (orientation_error > 0):
+        #     #     vel_msg.angular.z = -1 * orientation_error * self.kp_orient
+        #     # elif (orientation_error < 0):
+        #     #     vel_msg.angular.z = orientation_error * self.kp_orient
+        #     vel_msg.angular.z = -1 * orientation_error * self.kp_orient
+        #     # print('Cart theta is: {}'.format(cart_theta))
+        #     # print('Robot theta is: {}'.format(robot_theta))
+        #     # print('Orientation error: {}'.format(orientation_error))
+        #     # print('Angular Vel: {}'.format(vel_msg.angular.z))
+        #     # print('-------')
+        #     self.vel_pub.publish(vel_msg)
+        #     # control_flag = True
+        #     r.sleep()
+        # # if (not control_flag):
+        # #     success = False
+        # #     rospy.logerr('[ {} ]: Goal Orientation Not modified!'.format(rospy.get_name()))
+        # #     return success
+        # vel_msg.linear.x = 0
+        # vel_msg.angular.z = 0
+        # self.vel_pub.publish(vel_msg)
+        orientation_error = self.calc_cart_theta() - self.curr_theta
+        orientation_error_mod = atan2(sin(orientation_error),cos(orientation_error))
+        while(abs(orientation_error_mod) >= self.orientation_tolerance):
+            vel_msg.angular.z = orientation_error * self.kp_orient
             self.vel_pub.publish(vel_msg)
-            control_flag = True
-            r.sleep()
-        if (not control_flag):
-            success = False
-            rospy.logwarn('[ {} ]: Goal Orientation Not modified!'.format(rospy.get_name()))
-            return success
-        vel_msg.linear.x = 0
-        vel_msg.angular.z = 0
-        self.vel_pub.publish(vel_msg)
+            orientation_error = self.calc_cart_theta() - self.curr_theta
+            orientation_error_mod = atan2(sin(orientation_error),cos(orientation_error))
         rospy.loginfo('[ {} ]: Secondary Docking Goal Orientation Reached'.format(rospy.get_name()))
         return success
 
@@ -354,8 +406,12 @@ class DUActionServer:
         """
         #goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2.0
         #goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2.0
-        goal_x = self.curr_pose_trans_x + (self.cart_pose_trans[0] - self.curr_pose_trans_x)/2.0
-        goal_y = self.curr_pose_trans_y + (self.cart_pose_trans[1] - self.curr_pose_trans_y)/2.0
+        # goal_x = self.curr_pose_trans_x + (self.cart_pose_trans[0] - self.curr_pose_trans_x)/2.0
+        # goal_y = self.curr_pose_trans_y + (self.cart_pose_trans[1] - self.curr_pose_trans_y)/2.0
+        #print('Cart Pos: ({}, {})'.format(self.cart_pose_trans[0], self.cart_pose_trans[1]))
+        goal_x = self.cart_pose_trans[0] - (0.50 * cos(self.calc_cart_theta()))
+        goal_y = self.cart_pose_trans[1] - (0.50 * sin(self.calc_cart_theta()))
+        #print('(Goal X, Goal Y): ({}, {})'.format(goal_x, goal_y))
         return (goal_x, goal_y)
 
     def update_pose(self, data):
@@ -368,7 +424,9 @@ class DUActionServer:
     
     def update_cart_id(self, data):
         self.cart_id = data.data
+        #self.control_flag = True
         rospy.loginfo('[ {} ]: Cart id updated to {}'.format(rospy.get_name(), self.cart_id))
+        #self.cart_id_sub.unregister()
     
     '''
     def update_cart_pose(self, data):
@@ -382,9 +440,10 @@ class DUActionServer:
     '''
 
     def get_cart_pose(self, data):
-        #rospy.loginfo_throttle(1, 'getting cart pose')
+        rospy.loginfo_throttle(1, 'getting cart pose')
         self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
-        self.cart_pose_rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+        self.cart_pose_rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+        self.cart_pose_sub.unregister()
     
     def calc_cart_theta(self):
         rot_euler = tf_conversions.transformations.euler_from_quaternion(self.cart_pose_rot)
@@ -416,9 +475,9 @@ class DUActionServer:
         current_time = None
         self.error_theta = self.goal_angle(goal_x, goal_y) - self.curr_theta
         self.error_theta = atan2(sin(self.error_theta), cos(self.error_theta)) # angle sign regulation
-        print('Goal angle: {}'.format(self.goal_angle(goal_x, goal_y)))
-        print('Current angle: {}'.format(self.curr_theta))
-        print('Error angle: {}'.format(self.error_theta))
+        #print('Goal angle: {}'.format(self.goal_angle(goal_x, goal_y)))
+        #print('Current angle: {}'.format(self.curr_theta))
+        #print('Error angle: {}'.format(self.error_theta))
         #self.theta_msg = self.error_theta
         self.current_time = current_time if current_time is not None else time.time()
         delta_time = self.current_time - self.last_time

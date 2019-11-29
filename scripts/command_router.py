@@ -75,7 +75,7 @@ class CommandRouter:
             #print ("Message received: "  + message.payload)
             action = mqtt_msg['action']
             cart_id = mqtt_msg['cart_id'] # cart to be picked
-            command_id = str(mqtt_msg['command_id']) # string for syncing commands - not used 
+            command_id = str(mqtt_msg['command_id']) # string for syncing commands 
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
             cancellation_stamp = mqtt_msg['cancellation_stamp']

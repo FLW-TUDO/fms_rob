@@ -49,7 +49,7 @@ class PickAction:
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10)
+        self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10, latch=True) # cart id passed to docking phase - must be latced for future subscribers
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.dock_distance = 1.0 # min: 1.0
         rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
