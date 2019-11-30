@@ -126,8 +126,8 @@ class PickAction:
                 self.reconf_client.update_configuration({'pick': False})
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-            self.act_client.stop_tracking_goal()
-            self.status_flag = False
+            #self.act_client.stop_tracking_goal()
+            #self.status_flag = False
             return
 
     def calc_dock_position(self, cart_id):

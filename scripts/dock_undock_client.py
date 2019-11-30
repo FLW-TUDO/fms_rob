@@ -119,8 +119,8 @@ class DUActionClient:
                 rospy.logwarn(s)
                 self.reconf_client.update_configuration({"pick": False})
                 self.reconf_client.update_configuration({"return": False})
-            self.act_client.stop_tracking_goal()
-            self.status_flag = False
+            #self.act_client.stop_tracking_goal()
+            #self.status_flag = False
             return
     '''
     def dynamic_params_update(self, config):

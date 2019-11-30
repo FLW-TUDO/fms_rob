@@ -104,8 +104,8 @@ class HomeAction:
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
                 self.reconf_client.update_configuration({"undock": False})
-            self.act_client.stop_tracking_goal()
-            self.status_flag = False
+            #self.act_client.stop_tracking_goal()
+            #self.status_flag = False
             return
 
     '''

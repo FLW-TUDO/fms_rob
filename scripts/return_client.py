@@ -117,8 +117,8 @@ class ReturnAction:
                 rospy.logwarn(s)
                 self.reconf_client.update_configuration({"place": False})
                 self.reconf_client.update_configuration({"dock": False})
-            self.act_client.stop_tracking_goal()
-            self.status_flag = False
+            #self.act_client.stop_tracking_goal()
+            #self.status_flag = False
             return
 
     '''

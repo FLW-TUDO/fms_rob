@@ -80,8 +80,8 @@ class DriveAction:
                 self.act_client.cancel_goals_at_and_before_time(data.cancellation_stamp)
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
-            self.act_client.stop_tracking_goal()
-            self.goal_flstatus_flagag = False
+            #self.act_client.stop_tracking_goal()
+            #self.goal_flstatus_flagag = False
             return
 
     def status_update(self, data):

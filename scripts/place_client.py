@@ -123,8 +123,8 @@ class PlaceAction:
                 s = 'Cancelling all Goals at and before {}'.format(data.cancellation_stamp)
                 rospy.logwarn(s)
                 self.reconf_client.update_configuration({"dock": False})
-            self.act_client.stop_tracking_goal()
-            self.status_flag = False
+            #self.act_client.stop_tracking_goal()
+            #self.status_flag = False
             return
 
     def calc_park_spots(self, station_id, park_distance):
