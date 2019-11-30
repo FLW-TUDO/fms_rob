@@ -334,7 +334,7 @@ class DUActionServer:
         try:
             rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
             time_buffer = time.time()
-            while (time.time() - time_buffer <= 5.7): # solution for elevator bug
+            while (time.time() - time_buffer <= 5.2): # solution for elevator bug
                 if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                     rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
                     success = False
@@ -425,7 +425,7 @@ class DUActionServer:
     def update_cart_id(self, data):
         self.cart_id = data.data
         #self.control_flag = True
-        rospy.loginfo('[ {} ]: Cart id updated to {}'.format(rospy.get_name(), self.cart_id))
+        rospy.loginfo_throttle(1, '[ {} ]: Cart id updated to {}'.format(rospy.get_name(), self.cart_id))
         #self.cart_id_sub.unregister()
     
     '''
