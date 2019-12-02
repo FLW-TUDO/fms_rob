@@ -31,10 +31,12 @@ def get_parking_spots(req):
     global station_pose
     goal_inbound = PoseStamped()
     goal_outbound = PoseStamped()
-    goal_queue = PoseStamped()
+    goal_inbound_queue = PoseStamped()
+    goal_outbound_queue = PoseStamped()
     outbound_to_station_listener = tf.TransformListener()
     inbound_to_station_listener = tf.TransformListener()
-    queue_to_station_listener = tf.TransformListener()
+    inbound_queue_to_station_listener = tf.TransformListener()
+    outbound_queue_to_station_listener = tf.TransformListener()
     station_id = req.station_id
     distance = req.distance
     topic = ['/vicon/'+station_id+'/'+station_id, 'geometry_msgs/TransformStamped']
@@ -55,18 +57,23 @@ def get_parking_spots(req):
     goal_inbound.pose.position.y += distance
     goal_inbound_transformed = inbound_to_station_listener.transformPose('vicon_world', goal_inbound)
 
-    goal_queue.header.frame_id = 'vicon/'+station_id+'/'+station_id
-    goal_queue.pose.position.x -= distance
-    goal_queue.pose.position.y += distance
-    goal_queue_in_vicon_world = queue_to_station_listener.transformPose('vicon_world', goal_queue)
+    goal_outbound_queue.header.frame_id = 'vicon/'+station_id+'/'+station_id
+    goal_outbound_queue.pose.position.x -= distance
+    goal_outbound_queue.pose.position.y -= distance
+    goal_outbound_queue_transformed = outbound_queue_to_station_listener.transformPose('vicon_world', goal_outbound_queue)
 
-    # orientation wrt station
-    goal_inbound.pose.orientation.x = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[0] # same orientaiton as the station
-    goal_inbound.pose.orientation.y = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[1]
-    goal_inbound.pose.orientation.z = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[2]
-    goal_inbound.pose.orientation.w = goal_outbound.pose.orientation.x = goal_queue.pose.orientation.x = station_pose_quat[3]
+    goal_inbound_queue.header.frame_id = 'vicon/'+station_id+'/'+station_id
+    goal_inbound_queue.pose.position.x -= distance
+    goal_inbound_queue.pose.position.y += distance
+    goal_inbound_queue_transformed = inbound_queue_to_station_listener.transformPose('vicon_world', goal_inbound_queue)
+
+    # orientation wrt station - same orientaiton as the station
+    goal_inbound.pose.orientation.x = goal_outbound.pose.orientation.x = goal_inbound_queue.pose.orientation.x = goal_outbound_queue.pose.orientation.x = station_pose_quat[0] 
+    goal_inbound.pose.orientation.y = goal_outbound.pose.orientation.x = goal_inbound_queue.pose.orientation.x = goal_outbound_queue.pose.orientation.x = station_pose_quat[1]
+    goal_inbound.pose.orientation.z = goal_outbound.pose.orientation.x = goal_inbound_queue.pose.orientation.x = goal_outbound_queue.pose.orientation.x = station_pose_quat[2]
+    goal_inbound.pose.orientation.w = goal_outbound.pose.orientation.x = goal_inbound_queue.pose.orientation.x = goal_outbound_queue.pose.orientation.x = station_pose_quat[3]
     rospy.loginfo('[ {} ]: Parking Spots Calculated'.format(rospy.get_name()))
-    return [goal_outbound_transformed, goal_inbound_transformed, goal_queue_in_vicon_world]
+    return [goal_outbound_transformed, goal_inbound_transformed, goal_outbound_queue_transformed, goal_inbound_queue_transformed]
 
 def get_vicon_pose(data):
     """ Returns the location of the station in Vicon. """

@@ -3,4 +3,5 @@ float64 distance
 ---
 geometry_msgs/PoseStamped inbound
 geometry_msgs/PoseStamped outbound
-geometry_msgs/PoseStamped queue
+geometry_msgs/PoseStamped inbound_queue
+geometry_msgs/PoseStamped outbound_queue

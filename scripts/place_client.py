@@ -2,7 +2,7 @@
 """
 A client that requests the navigation of the robot to a station. The exact location
 for parking next to the station is specified by the bound mode sent by user (inbound
-- outbound - queue). It acts as a client to ROS's built in move base node, which is 
+- outbound - inbound_queue - outbound_queue). It acts as a client to ROS's built in move base node, which is 
 an implementation of an action server. Please note that the status message architecture
 follows the Goal Status Array type specified in ROS actions by default.
 """
@@ -71,7 +71,7 @@ class PlaceAction:
             dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
             if (dock_flag == True):
                 parking_spots = self.calc_park_spots(self.station_id, self.park_distance)
-                rospy.loginfo('[ {} ]: Calculated parking spots for placing are {}'.format(rospy.get_name(), parking_spots))
+                #rospy.loginfo('[ {} ]: Calculated parking spots for placing are {}'.format(rospy.get_name(), parking_spots))
                 goal = MoveBaseGoal()
                 goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
                 goal.target_pose.header.stamp = rospy.Time.now()
@@ -92,13 +92,20 @@ class PlaceAction:
                     goal.target_pose.pose.orientation.y = parking_spots.outbound.pose.orientation.y
                     goal.target_pose.pose.orientation.z = parking_spots.outbound.pose.orientation.z
                     goal.target_pose.pose.orientation.w = parking_spots.outbound.pose.orientation.w
-                if (self.bound_mode == 'queue'):
-                    goal.target_pose.pose.position.x = parking_spots.queue.pose.position.x
-                    goal.target_pose.pose.position.y = parking_spots.queue.pose.position.y
-                    goal.target_pose.pose.orientation.x = parking_spots.queue.pose.orientation.x
-                    goal.target_pose.pose.orientation.y = parking_spots.queue.pose.orientation.y
-                    goal.target_pose.pose.orientation.z = parking_spots.queue.pose.orientation.z
-                    goal.target_pose.pose.orientation.w = parking_spots.queue.pose.orientation.w
+                if (self.bound_mode == 'inbound_queue'):
+                    goal.target_pose.pose.position.x = parking_spots.inbound_queue.pose.position.x
+                    goal.target_pose.pose.position.y = parking_spots.inbound_queue.pose.position.y
+                    goal.target_pose.pose.orientation.x = parking_spots.inbound_queue.pose.orientation.x
+                    goal.target_pose.pose.orientation.y = parking_spots.inbound_queue.pose.orientation.y
+                    goal.target_pose.pose.orientation.z = parking_spots.inbound_queue.pose.orientation.z
+                    goal.target_pose.pose.orientation.w = parking_spots.inbound_queue.pose.orientation.w
+                if (self.bound_mode == 'outbound_queue'):
+                    goal.target_pose.pose.position.x = parking_spots.outbound_queue.pose.position.x
+                    goal.target_pose.pose.position.y = parking_spots.outbound_queue.pose.position.y
+                    goal.target_pose.pose.orientation.x = parking_spots.outbound_queue.pose.orientation.x
+                    goal.target_pose.pose.orientation.y = parking_spots.outbound_queue.pose.orientation.y
+                    goal.target_pose.pose.orientation.z = parking_spots.outbound_queue.pose.orientation.z
+                    goal.target_pose.pose.orientation.w = parking_spots.outbound_queue.pose.orientation.w
                 rospy.loginfo('[ {} ]: Sending Place goal to action server'.format(rospy.get_name())) 
                 rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
                 reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
@@ -129,8 +136,8 @@ class PlaceAction:
 
     def calc_park_spots(self, station_id, park_distance):
         """
-        Calls a service to Calculate the location of 3 parking spots next to the workstation
-        (inbound - outbound - queue)
+        Calls a service to Calculate the location of 4 parking spots next to the workstation
+        (inbound - outbound - inbound_queue - outbound_queue)
         """
         rospy.loginfo('[ {} ]: Calculating Parking Spots'.format(rospy.get_name()))
         rospy.wait_for_service('/'+ROBOT_ID+'/get_parking_spots')
@@ -139,7 +146,7 @@ class PlaceAction:
             resp = get_park_spots(station_id, park_distance)
             return resp
         except rospy.ServiceException:
-            rospy.logerr('[ {} ]: Calculating Docking Position Service call Failed!'.format(rospy.get_name()))
+            rospy.logerr('[ {} ]: Calculating Parking Position Service call Failed!'.format(rospy.get_name()))
 
     '''
     def dynamic_params_update(self, config):
