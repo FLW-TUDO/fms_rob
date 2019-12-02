@@ -322,6 +322,7 @@ class DUActionServer:
         ros_mocap package) while under the cart.
         """
         success = True
+        attempts = 3
         if (self.du_server.is_preempt_requested()):
             self.du_server.set_preempted()
             rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))            
@@ -331,24 +332,32 @@ class DUActionServer:
             elev_act = 3
         else:
             elev_act = 2 
-        try:
-            rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
-            time_buffer = time.time()
-            while (time.time() - time_buffer <= 5.2): # solution for elevator bug
-                if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
-                    rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
-                    success = False
-                    return success
-                    #break 
-                rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
-                move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
-                move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
-            rospy.loginfo('[ {} ]: Elevator Service call Successful'.format(rospy.get_name()))
-        except rospy.ServiceException: 
-            rospy.logerr('[ {} ]: Elevator Service call Failed!'.format(rospy.get_name()))
-            success = False
-            #self.result.res = False
-            #self.du_server.set_aborted(self.result)
+        counter = 1
+        while (counter <= attempts):
+            if (counter > 1):
+                rospy.loginfo('[ {} ]: Attempting to call Elevator Service again..'.format(rospy.get_name()))
+            try:
+                rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
+                time_buffer = time.time()
+                while (time.time() - time_buffer <= 5.2): # solution for elevator bug
+                    if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
+                        rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
+                        success = False
+                        return success
+                        #break 
+                    rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
+                    move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
+                    move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
+                rospy.loginfo('[ {} ]: Elevator Service call Successful'.format(rospy.get_name()))
+                break
+            except rospy.ServiceException: 
+                rospy.logwarn('[ {} ]: Elevator Service call Failed!'.format(rospy.get_name()))
+                counter += 1
+            if (counter > attempts):
+                rospy.logerr('[ {} ]: Elevator Service call Failed after {} attempts!'.format(rospy.get_name(), counter-1))
+                success = False
+                #self.result.res = False
+                #self.du_server.set_aborted(self.result)
         return success
     
     def do_du_rotate(self, angle):
