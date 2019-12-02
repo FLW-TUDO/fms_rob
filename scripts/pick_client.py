@@ -99,12 +99,15 @@ class PickAction:
                 goal.target_pose.pose.orientation.y = dock_pose.orientation.y
                 goal.target_pose.pose.orientation.z = dock_pose.orientation.z
                 goal.target_pose.pose.orientation.w = dock_pose.orientation.w
-                rospy.loginfo('[ {} ]: Sending Goal to Action Server'.format(rospy.get_name())) 
                 #rospy.loginfo('Pick goal coordinates: {}'.format(goal))
-                rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
-                reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
-                reset_costmaps()
+                try:
+                    rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
+                    reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
+                    reset_costmaps()
+                except:
+                    rospy.logwarn('[ {} ]: Clear Costmaps Service Call Failed! '.format(rospy.get_name()))
                 #self.act_client.send_goal_and_wait(goal) # blocking
+                rospy.loginfo('[ {} ]: Sending Goal to Action Server'.format(rospy.get_name())) 
                 self.act_client.send_goal(goal) # non-blocking - Also alternative goal pursuit is also possible in this mode
                 self.status_flag = True
             else:

@@ -143,7 +143,7 @@ class CommandRouter:
             msg.goal = goal
             msg.command_id = command_id
             msg.station_id = station_id
-            msg.bound_mode = bound_mode # inbound, outbound, queue
+            msg.bound_mode = bound_mode # inbound, outbound, inbound_queue, outbound_queue
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'home'):
