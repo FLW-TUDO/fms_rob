@@ -104,8 +104,10 @@ class PickAction:
                     rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
                     reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
                     reset_costmaps()
+                    rospy.loginfo('[ {} ]: Costmaps Cleared Successfully'.format(rospy.get_name())) 
                 except:
-                    rospy.logwarn('[ {} ]: Clear Costmaps Service Call Failed! '.format(rospy.get_name()))
+                    rospy.logwarn('[ {} ]: Costmaps Clearing Service Call Failed!'.format(rospy.get_name())) 
+                rospy.sleep(0.5)
                 #self.act_client.send_goal_and_wait(goal) # blocking
                 rospy.loginfo('[ {} ]: Sending Goal to Action Server'.format(rospy.get_name())) 
                 self.act_client.send_goal(goal) # non-blocking - Also alternative goal pursuit is also possible in this mode
@@ -177,9 +179,14 @@ class PickAction:
                 return
             if (status == 4): # if action execution is aborted
                 #self.reconf_client.update_configuration({'pick': False})
-                self.act_client.stop_tracking_goal()
+                #self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('[ {} ]: Execution Aborted by Move Base Server!'.format(rospy.get_name()))
+            if (status == 2): # if action execution is preempted
+                #self.reconf_client.update_configuration({"dock": False})
+                #self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logwarn('[ {} ]: Execution Preempted by user!'.format(rospy.get_name())) 
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package

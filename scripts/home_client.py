@@ -80,9 +80,14 @@ class HomeAction:
                 goal.target_pose.pose.orientation.w = home_pose['rot_w']
                 rospy.loginfo('[ {} ]: Sending Goal to Action Server'.format(rospy.get_name())) 
                 #rospy.loginfo('Home goal coordinates: {}'.format(goal))
-                rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
-                reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
-                reset_costmaps()
+                try:
+                    rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
+                    reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
+                    reset_costmaps()
+                    rospy.loginfo('[ {} ]: Costmaps Cleared Successfully'.format(rospy.get_name())) 
+                except:
+                    rospy.logwarn('[ {} ]: Costmaps Clearing Service Call Failed!'.format(rospy.get_name())) 
+                rospy.sleep(0.5)
                 #self.act_client.send_goal_and_wait(goal) # blocking
                 self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
@@ -139,9 +144,14 @@ class HomeAction:
                 return
             if (status == 4): # if action execution is aborted
                 #self.reconf_client.update_configuration({"undock": False})
-                self.act_client.stop_tracking_goal()
+                #self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('[ {} ]: Execution Aborted by Move Base Server!'.format(rospy.get_name()))
+            if (status == 2): # if action execution is preempted
+                #self.reconf_client.update_configuration({"dock": False})
+                #self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logwarn('[ {} ]: Execution Preempted by user!'.format(rospy.get_name())) 
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package

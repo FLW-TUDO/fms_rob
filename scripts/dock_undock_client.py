@@ -39,7 +39,7 @@ class DUActionClient:
             #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
             pass
         else:
-            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))
+            rospy.logerr('[ {} ]: Timedout waiting for Dock Undock Server!'.format(rospy.get_name()))
             err_flag = True        
         self.act_client.wait_for_server() # wait for server start up
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.dock)
@@ -163,9 +163,14 @@ class DUActionClient:
             if (status == 4): # if action execution is aborted
                 self.reconf_client.update_configuration({"pick": False})
                 self.reconf_client.update_configuration({"return": False})
-                self.act_client.stop_tracking_goal()
+                #self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('[ {} ]: Execution Aborted by Dock-Undock Server!'.format(rospy.get_name()))
+            if (status == 2): # if action execution is preempted
+                #self.reconf_client.update_configuration({"dock": False})
+                #self.act_client.stop_tracking_goal()
+                self.status_flag = False
+                rospy.logwarn('[ {} ]: Execution Preempted by user!'.format(rospy.get_name())) 
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
