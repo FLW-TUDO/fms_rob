@@ -103,7 +103,7 @@ class ReturnAction:
                 self.status_flag = True
             else:
                 #self.act_client.cancel_goal()
-                rospy.logerr('[ {} ]: Action Rejected! - Attempting to Return without Dock or Place'.format(rospy.get_name()))
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Return Action'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):

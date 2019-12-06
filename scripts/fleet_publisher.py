@@ -10,11 +10,11 @@ class FleetPub:
     def __init__(self):
         rospy.init_node('fleet_publisher')
         self.rob_2_pub = rospy.Publisher('/rb1_base_b/move_base/TebLocalPlannerROS/obstacles', ObstacleArrayMsg, queue_size=10)
-        topic = ['/vicon/rb1_base_a/rb1_base_a', 'geometry_msgs/TransformStamped']
+        topic = ['/vicon/rb1_base_c/rb1_base_c', 'geometry_msgs/TransformStamped']
         if(topic not in rospy.get_published_topics('/vicon/')):
             rospy.logerr('Robot Topic Not Found!')
             return
-        rospy.Subscriber('/vicon/rb1_base_a/rb1_base_a', TransformStamped, self.rob_1_vicon_update)
+        rospy.Subscriber('/vicon/rb1_base_c/rb1_base_c', TransformStamped, self.rob_1_vicon_update)
         self.vel_x = 1.0
         self.vel_y = 1.0
         rospy.sleep(1)

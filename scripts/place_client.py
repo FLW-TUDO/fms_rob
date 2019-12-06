@@ -119,7 +119,7 @@ class PlaceAction:
                 self.act_client.send_goal(goal) # non-blocking
                 self.status_flag = True
             else:
-                rospy.logerr('[ {} ]: Action Rejected! - Attempting to place without dock'.format(rospy.get_name()))
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Place Action'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):

@@ -69,7 +69,11 @@ class CommandRouter:
 
     def parse_data(self, client, userdata, message):
         """ Parses data sent by user via MQTT. """
-        mqtt_msg = json.loads(message.payload)
+        try:
+            mqtt_msg = json.loads(message.payload)
+        except:
+            rospy.logerr('[ {} ]: Json Message not correecly Formatted!'.format(rospy.get_name()))
+            return
         goal = Pose()
         if (mqtt_msg['robot_id'] == ROBOT_ID):
             #print ("Message received: "  + message.payload)

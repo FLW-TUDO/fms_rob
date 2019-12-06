@@ -93,7 +93,7 @@ class HomeAction:
                 self.status_flag = True
             else:
                 #self.act_client.cancel_goal()
-                rospy.logerr('[ {} ]: Action Rejected! - Attempting to home without undock'.format(rospy.get_name()))
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Home Action'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):

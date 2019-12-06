@@ -79,7 +79,7 @@ class DUActionClient:
                     rospy.logerr('[ {} ]: Dock Action Rejected! - Already processing a docking operation'.format(rospy.get_name()))
                 return
             else:
-                rospy.logerr('[ {} ]: Action Rejected! - Attempting to dock without pick'.format(rospy.get_name()))
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Dock Action'.format(rospy.get_name()))
                 return
         elif (data.action == 'undock'):
             self.command_id = data.command_id
@@ -100,7 +100,7 @@ class DUActionClient:
                     rospy.logerr('[ {} ]: Undock Action Rejected! - Already processing an undocking operation'.format(rospy.get_name()))
                 return
             else:
-                rospy.logerr('[ {} ]: Action Rejected! - Attempting to undock without return'.format(rospy.get_name()))
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Undock Action'.format(rospy.get_name()))
                 return 
         else:
             if (data.action == 'cancelCurrent'):

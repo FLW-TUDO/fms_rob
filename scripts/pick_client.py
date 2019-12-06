@@ -115,7 +115,7 @@ class PickAction:
             else:
                 #self.act_client.cancel_goal()
                 #self.reconf_client.update_configuration({'pick': False})
-                rospy.logerr('[ {} ]: Action Rejected! - Attempting to pick without undock or home'.format(rospy.get_name()))
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Pick Action'.format(rospy.get_name()))
                 return
         else:
             if (data.action == 'cancelCurrent'):
