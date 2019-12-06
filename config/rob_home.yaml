@@ -7,8 +7,8 @@ robot_home:
             trans_z: 0, 
             rot_x: 0, 
             rot_y: 0, 
-            rot_z: 0, 
-            rot_w: 1
+            rot_z: 0.7, 
+            rot_w: 0.7
             },
         rb1_base_b: {
             trans_x: -5.0, 
