@@ -66,7 +66,7 @@ class DUActionServer:
         self.collision_point_x = float('inf')
         self.collision_point_y = float('inf')
         self.collision_tolerance_x = 0.7 # 0.75
-        self.collision_tolerance_y = 0.39 # 0.4
+        self.collision_tolerance_y = 0.27 # 0.4
         self.curr_col_seq = 0
         self.last_col_seq = 0
         ''' P-Controller settings for primary motion '''
@@ -167,7 +167,7 @@ class DUActionServer:
             if (success_odom_reset):
                 self.rot_speed = 0.3 #0.5
                 self.ang_tolerance = 0.002 #0.00
-                success_rotate = self.do_du_rotate(dock_angle) 
+                success_rotate = self.do_du_rotate(dock_angle)
             if (success_rotate):
                 col_undock_flag = False
                 while (self.collision_detected()):
