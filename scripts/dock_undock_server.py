@@ -12,7 +12,7 @@ import rospy
 import actionlib
 import sys, time
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import PoseStamped, TransformStamped, Twist
+from geometry_msgs.msg import PoseStamped, TransformStamped, Twist, PointStamped
 from fms_rob.msg import dockUndockAction, dockUndockGoal, dockUndockFeedback, dockUndockResult
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Odometry
@@ -49,7 +49,7 @@ class DUActionServer:
         self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.pose_subscriber = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose)
+        self.pose_sub = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose) ####
         self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         try:
             self.reconf_client = dynamic_reconfigure.client.Client('dynamic_reconf_server', timeout=30) # client of fms_rob dynmaic reconfigure server
@@ -59,6 +59,16 @@ class DUActionServer:
             self.teb_reconf_client = dynamic_reconfigure.client.Client('/'+ROBOT_ID+'/move_base/TebLocalPlannerROS', timeout=30)
         except:
             rospy.logerr('TEB Planner is Not running!')
+        '''collision detector settings'''
+        self.col_detector_sub = rospy.Subscriber('/'+ROBOT_ID+'/robotnik_safety_controller/warning_collision_point', PointStamped, self.collision_update)
+        #self.collision_point = PointStamped()
+        #self.collision_tolerance = PointStamped()
+        self.collision_point_x = float('inf')
+        self.collision_point_y = float('inf')
+        self.collision_tolerance_x = 0.75
+        self.collision_tolerance_y = 0.3
+        self.curr_col_seq = 0
+        self.last_col_seq = 0
         ''' P-Controller settings for primary motion '''
         #self.move_speed = 0.09 #0.14
         self.move_kp = 0.99 #0.99
@@ -115,6 +125,14 @@ class DUActionServer:
         success_odom_reset = False
         self.result.res = False
         if (elev_mode == True): # True --> Dock // False --> Undock
+            col_flag = False
+            while (self.collision_detected()):
+                if (col_flag == False):
+                    print('Cart Slot Occupied!')
+                    col_flag = True
+                rospy.sleep(0.5) # note: >0.2
+            else:
+                print('Cart Slot Free')
             success_se_move = self.do_du_se_move(dock_distance) # pre-motion before cart
             rospy.sleep(0.2) # wait for complete halt of robot
             if (success_se_move):
@@ -392,16 +410,34 @@ class DUActionServer:
         self.reconf_client.update_configuration({"return_pose_rot_x": self.cart_pose_rot[0]})  
         self.reconf_client.update_configuration({"return_pose_rot_y": self.cart_pose_rot[1]})  
         self.reconf_client.update_configuration({"return_pose_rot_z": self.cart_pose_rot[2]})  
-        self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})    
+        self.reconf_client.update_configuration({"return_pose_rot_w": self.cart_pose_rot[3]})  
 
-    def mapping(self, value, leftMin=-pi, leftMax=pi, rightMin=0, rightMax=2*pi):
-        # Figure out how 'wide' each range is
-        leftSpan = leftMax - leftMin
-        rightSpan = rightMax - rightMin
-        # Convert the left range into a 0-1 range (float)
-        valueScaled = float(value - leftMin) / float(leftSpan)
-        # Convert the 0-1 range into a value in the right range.
-        return rightMin + (valueScaled * rightSpan) 
+    def collision_update(self, data):
+        #print(data)
+        self.collision_point_x = data.point.x
+        self.collision_point_y = data.point.y
+        self.curr_col_seq = data.header.seq
+
+    def collision_detected(self):
+        #self.last_col_seq = data.header.seq
+        print('Entered')
+        if (self.curr_col_seq > self.last_col_seq):
+            print('Entered 2')
+            self.last_col_seq = self.curr_col_seq
+            if ((self.collision_point_x <= self.collision_tolerance_x) and (self.collision_point_y <= self.collision_tolerance_y)):
+                print('Collision detected!')
+                return True
+            else:
+                return False
+
+    # def mapping(self, value, leftMin=-pi, leftMax=pi, rightMin=0, rightMax=2*pi):
+    #     # Figure out how 'wide' each range is
+    #     leftSpan = leftMax - leftMin
+    #     rightSpan = rightMax - rightMin
+    #     # Convert the left range into a 0-1 range (float)
+    #     valueScaled = float(value - leftMin) / float(leftSpan)
+    #     # Convert the 0-1 range into a value in the right range.
+    #     return rightMin + (valueScaled * rightSpan) 
     
     def get_odom(self, data):
         """ Obtains current odom readings. """
@@ -449,7 +485,7 @@ class DUActionServer:
     '''
 
     def get_cart_pose(self, data):
-        rospy.loginfo_throttle(1, 'getting cart pose')
+        #rospy.loginfo_throttle(1, 'getting cart pose')
         self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
         self.cart_pose_rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         self.cart_pose_sub.unregister()
