@@ -65,8 +65,8 @@ class DUActionServer:
         #self.collision_tolerance = PointStamped()
         self.collision_point_x = float('inf')
         self.collision_point_y = float('inf')
-        self.collision_tolerance_x = 0.75
-        self.collision_tolerance_y = 0.3
+        self.collision_tolerance_x = 0.7 # 0.75
+        self.collision_tolerance_y = 0.39 # 0.4
         self.curr_col_seq = 0
         self.last_col_seq = 0
         ''' P-Controller settings for primary motion '''
@@ -125,14 +125,14 @@ class DUActionServer:
         success_odom_reset = False
         self.result.res = False
         if (elev_mode == True): # True --> Dock // False --> Undock
-            col_flag = False
+            col_dock_flag = False
             while (self.collision_detected()):
-                if (col_flag == False):
-                    print('Cart Slot Occupied!')
-                    col_flag = True
-                rospy.sleep(0.5) # note: >0.2
+                if (col_dock_flag == False):
+                    rospy.logwarn('[ {} ]: Cart Slot Occupied!'.format(rospy.get_name()))
+                    col_dock_flag = True
+                rospy.sleep(1) # note: >0.2
             else:
-                print('Cart Slot Free')
+                rospy.loginfo('[ {} ]: Cart Slot Free'.format(rospy.get_name()))
             success_se_move = self.do_du_se_move(dock_distance) # pre-motion before cart
             rospy.sleep(0.2) # wait for complete halt of robot
             if (success_se_move):
@@ -169,6 +169,14 @@ class DUActionServer:
                 self.ang_tolerance = 0.002 #0.00
                 success_rotate = self.do_du_rotate(dock_angle) 
             if (success_rotate):
+                col_undock_flag = False
+                while (self.collision_detected()):
+                    if (col_undock_flag == False):
+                        rospy.logwarn('[ {} ]: Robot Exit Occupied!'.format(rospy.get_name()))
+                        col_undock_flag = True
+                    rospy.sleep(1) # note: >0.2
+                else:
+                    rospy.loginfo('[ {} ]: Robot Exit Free'.format(rospy.get_name()))
                 success_move = self.do_du_move(dock_distance)
             if (success_move and success_elev and success_rotate and success_odom_reset):
                 self.klt_num_pub.publish('') # reset robot vicon location for ros_mocap package
@@ -401,8 +409,7 @@ class DUActionServer:
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Rotation Successful'.format(rospy.get_name()))
         return success
-    
-    
+      
     def save_cart_pose(self):
         """ Saves cart pose to enable returning it later during the return action. """
         self.reconf_client.update_configuration({"return_pose_trans_x": self.cart_pose_trans[0]})
@@ -420,12 +427,10 @@ class DUActionServer:
 
     def collision_detected(self):
         #self.last_col_seq = data.header.seq
-        print('Entered')
         if (self.curr_col_seq > self.last_col_seq):
-            print('Entered 2')
             self.last_col_seq = self.curr_col_seq
             if ((self.collision_point_x <= self.collision_tolerance_x) and (self.collision_point_y <= self.collision_tolerance_y)):
-                print('Collision detected!')
+                rospy.logerr('[ {} ]: Collision Detected'.format(rospy.get_name()))
                 return True
             else:
                 return False
