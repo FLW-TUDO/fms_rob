@@ -66,7 +66,7 @@ class DUActionServer:
         self.collision_point_x = float('inf')
         self.collision_point_y = float('inf')
         self.collision_tolerance_x = 0.7 # 0.75
-        self.collision_tolerance_y = 0.27 # 0.4
+        self.collision_tolerance_y = 0.02 # 0.4
         self.curr_col_seq = 0
         self.last_col_seq = 0
         ''' P-Controller settings for primary motion '''
@@ -365,7 +365,7 @@ class DUActionServer:
             try:
                 rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
                 time_buffer = time.time()
-                while (time.time() - time_buffer <= 5.2): # solution for elevator bug
+                while (time.time() - time_buffer <= 5.3): # solution for elevator bug
                     if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                         rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
                         success = False
@@ -429,7 +429,8 @@ class DUActionServer:
         #self.last_col_seq = data.header.seq
         if (self.curr_col_seq > self.last_col_seq):
             self.last_col_seq = self.curr_col_seq
-            if ((self.collision_point_x <= self.collision_tolerance_x) and (self.collision_point_y <= self.collision_tolerance_y)):
+            if ((self.collision_point_x <= self.collision_tolerance_x) and (self.collision_point_y <= self.collision_tolerance_y)\
+            and (self.collision_point_y > -1*self.collision_tolerance_y)):                
                 rospy.logerr('[ {} ]: Collision Detected'.format(rospy.get_name()))
                 return True
             else:
