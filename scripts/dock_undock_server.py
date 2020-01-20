@@ -150,7 +150,7 @@ class DUActionServer:
             if (success_move and success_elev and success_rotate and success_odom_reset and success_se_move):
                 self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
                 try:
-                    self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.25}) # increase obstacle inflation distance after carrying cart
+                    self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.27}) # increase obstacle inflation distance after carrying cart
                     rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
                 except:
                     rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
@@ -365,7 +365,7 @@ class DUActionServer:
             try:
                 rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
                 time_buffer = time.time()
-                while (time.time() - time_buffer <= 5.3): # solution for elevator bug
+                while (time.time() - time_buffer <= 5.4): # solution for elevator bug
                     if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                         rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
                         success = False
