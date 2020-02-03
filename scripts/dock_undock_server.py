@@ -87,7 +87,7 @@ class DUActionServer:
         self.kp_orient = 0.6 #0.3
         self.kp_trans = 0.8 #0.8    ######
         self.distance_tolerance = 0.003 #0.003
-        self.orientation_tolerance = 0.01 #0.02
+        self.orientation_tolerance = 0.009 #0.01 #0.02
         current_time = None
         self.sample_time = 0.0001
         self.current_time = current_time if current_time is not None else time.time()
@@ -106,14 +106,14 @@ class DUActionServer:
     def execute(self, goal):
         self.control_flag = False
         self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
-        rospy.sleep(1)
+        rospy.sleep(1.5)
         # while (self.control_flag == False):
         #     print('waiting for cart id subscribtion')
         #     rospy.sleep(0.2)
         #print(self.cart_id)
         #print('Cart Vicon Topic: {}'.format('/vicon/'+self.cart_id+'/'+self.cart_id))
         self.cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id pose
-        rospy.sleep(1)
+        rospy.sleep(1.5)
         #print('Cart Pos: ({}, {})'.format(self.cart_pose_trans[0], self.cart_pose_trans[1]))
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
@@ -136,8 +136,10 @@ class DUActionServer:
             success_se_move = self.do_du_se_move(dock_distance) # pre-motion before cart
             rospy.sleep(0.2) # wait for complete halt of robot
             if (success_se_move):
-                success_odom_reset = self.reset_odom()
+                success_odom_reset = self.reset_odom() # not needed in time-based docking
             if (success_odom_reset):
+                self.move_time = 0.92 #1.35
+                self.move_speed = 0.5 #0.35
                 success_move = self.do_du_move(dock_distance/2.0) # move under cart
                 self.save_cart_pose() 
                 rospy.sleep(0.2)
@@ -145,7 +147,7 @@ class DUActionServer:
                 success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
             if (success_elev):
                 self.rot_speed = 0.7 #0.5
-                self.ang_tolerance = 0.02 #0.002
+                self.ang_tolerance = 0.01 #0.002
                 success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
             if (success_move and success_elev and success_rotate and success_odom_reset and success_se_move):
                 self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
@@ -244,64 +246,6 @@ class DUActionServer:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
-        # print('Theta error: {}'.format((self.calc_cart_theta()) - self.curr_theta))
-        # print('Cart theta is: {}'.format(self.calc_cart_theta()))
-        # print('Robot theta is: {}'.format(self.curr_theta))
-        r = rospy.Rate(10) 
-        # control_flag = False
-        # orientation_error = self.curr_theta - self.calc_cart_theta()
-        # while(abs(orientation_error) >= self.orientation_tolerance):
-        #     if (self.du_server.is_preempt_requested()):
-        #         self.du_server.set_preempted()
-        #         rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
-        #         success = False
-        #         return success
-        #     #if ((self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)) > 3.2): #
-        #     #print('Orientation error 1: {}'.format(self.mapping(self.calc_cart_theta()) - self.mapping(self.curr_theta)))
-        #     #if (self.curr_theta <= self.calc_cart_theta()):
-        #     #    orientation_error = self.calc_cart_theta() - self.curr_theta
-        #     #else:
-        #     cart_theta = self.calc_cart_theta()
-        #     robot_theta = self.curr_theta
-        #     orientation_error = (robot_theta - cart_theta)
-        #     # if (orientation_error > 3.14):
-        #     #     orientation_error = 3.14
-        #     # elif (orientation_error < 3.14):
-        #     #     orientation_error = -3.14
-        #     # if (robot_theta > 0 and cart_theta < 0):
-        #     #     vel_msg.angular.z = orientation_error * self.kp_orient
-        #     # if (robot_theta < 0 and cart_theta > 0):
-        #     #     vel_msg.angular.z = -1 * orientation_error * self.kp_orient
-        #     # if (robot_theta > 0 and cart_theta > 0):
-        #     #     if (orientation_error > 0):
-        #     #         vel_msg.angular.z = orientation_error * self.kp_orient
-        #     #     else:
-        #     #         vel_msg.angular.z = -1 * orientation_error * self.kp_orient
-        #     # if (robot_theta < 0 and cart_theta < 0):
-        #     #     if (orientation_error < 0):
-        #     #         vel_msg.angular.z =  -1 * orientation_error * self.kp_orient
-        #     #     else:
-        #     #         vel_msg.angular.z = orientation_error * self.kp_orient
-        #     # if (orientation_error > 0):
-        #     #     vel_msg.angular.z = -1 * orientation_error * self.kp_orient
-        #     # elif (orientation_error < 0):
-        #     #     vel_msg.angular.z = orientation_error * self.kp_orient
-        #     vel_msg.angular.z = -1 * orientation_error * self.kp_orient
-        #     # print('Cart theta is: {}'.format(cart_theta))
-        #     # print('Robot theta is: {}'.format(robot_theta))
-        #     # print('Orientation error: {}'.format(orientation_error))
-        #     # print('Angular Vel: {}'.format(vel_msg.angular.z))
-        #     # print('-------')
-        #     self.vel_pub.publish(vel_msg)
-        #     # control_flag = True
-        #     r.sleep()
-        # # if (not control_flag):
-        # #     success = False
-        # #     rospy.logerr('[ {} ]: Goal Orientation Not modified!'.format(rospy.get_name()))
-        # #     return success
-        # vel_msg.linear.x = 0
-        # vel_msg.angular.z = 0
-        # self.vel_pub.publish(vel_msg)
         orientation_error = self.calc_cart_theta() - self.curr_theta
         orientation_error_mod = atan2(sin(orientation_error),cos(orientation_error))
         while(abs(orientation_error_mod) >= self.orientation_tolerance):
@@ -323,7 +267,8 @@ class DUActionServer:
         r = rospy.Rate(10)
         #rospy.loginfo('Current Odom value{}'.format(abs(self.odom_coor.position.x)))
         rospy.loginfo('[ {} ]: Moving under Cart'.format(rospy.get_name())) # periodic logging
-        #while(abs(self.odom_coor.position.x) < distance):
+        '''odom-based motion docking'''
+        # #while(abs(self.odom_coor.position.x) < distance):
         while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
             if (self.du_server.is_preempt_requested()):
                 self.du_server.set_preempted()
@@ -336,6 +281,20 @@ class DUActionServer:
             self.feedback.odom_data = self.odom_data
             self.du_server.publish_feedback(self.feedback)
             r.sleep()
+        '''time-based motion docking'''
+        # timer = time.time()
+        # while (time.time() - timer < self.move_time):
+        #     if (self.du_server.is_preempt_requested()):
+        #         self.du_server.set_preempted()
+        #         rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
+        #         success = False
+        #         return success  
+        #     vel_msg.linear.x = self.move_speed  
+        #     vel_msg.angular.z = 0
+        #     self.vel_pub.publish(vel_msg)
+        #     self.feedback.odom_data = self.odom_data # unncessary but kept for consistency
+        #     self.du_server.publish_feedback(self.feedback)
+        #     r.sleep()
         vel_msg.linear.x = 0
         self.vel_pub.publish(vel_msg)
         rospy.loginfo('[ {} ]: Motion under Cart Successful'.format(rospy.get_name()))
@@ -365,7 +324,7 @@ class DUActionServer:
             try:
                 rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
                 time_buffer = time.time()
-                while (time.time() - time_buffer <= 5.4): # solution for elevator bug
+                while (time.time() - time_buffer <= 5.5): # solution for elevator bug
                     if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                         rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
                         success = False
