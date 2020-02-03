@@ -68,6 +68,32 @@ Port: 8888
 
 *Note*: To send MQTT commands, simple apps can be used such as MQTTLens on Google Chrome (https://chrome.google.com/webstore/detail/mqttlens/hemojaaeigabkbcookmlgmdigohjobjm?hl=en)
 
+### **Possible actions:**
+
+* **pick**: Navigates the robot to a calculated location infront of the requested cart
+* **dock**: Performs the actual docking operation with the cart, which consists of: 1) auxillary motion to correct pose error by the local planner, 2) motion under cart, 3) elevator raise, 4) 180<sup>o</sup> rotaion
+  
+* **undock**: Performs the undocking operation which consists of: 1) elevator drop, 2) 180<sup>o</sup> rotaion, 3) motion out from under cart
+* **place**: Places the cart near one of the stations in one of 3 locations (*bound mode*): *inbound*, *outbound*, or *queue*
+* **drive**: Navigates the robot to a pose spectified by the user
+* **return**: return the cart to its pick up position
+* **home**: sends robot to its predefined home position
+* **cancelCurrent**: cancels currently active goal (task)
+* **cancelAll**: cancels all goals (tasks) in the queue of the action server
+* **cancelAtAndBefore**: cancel all goals (tasks) at and before a time stamp (cancellation_stamp) specified by the user
+
+## **Behavior**
+
+---
+
+![alt text](img/behavior.png "Behavior flow chart")
+
+Interlock system enables/dsiabels the specific actions that the robot can execte
+
+## **Further Note**
+
+---
+
 To interface **directly** with the action clients, custom ROS messages (namely: *RobActionSelect* & *RobActionStatus*) can be published or received on the following topics:
 
 ```
@@ -103,43 +129,19 @@ string action
 uint8 status  
 ```
 
-
-### **Possible actions:**
-
-* **pick**: Navigates the robot to a calculated location infront of the requested cart
-* **dock**: Performs the actual docking operation with the cart, which consists of: 1) auxillary motion to correct pose error by the local planner, 2) motion under cart, 3) elevator raise, 4) 180<sup>o</sup> rotaion
-  
-* **undock**: Performs the undocking operation which consists of: 1) elevator drop, 2) 180<sup>o</sup> rotaion, 3) motion out from under cart
-* **place**: Places the cart near one of the stations in one of 3 locations (*bound mode*): *inbound*, *outbound*, or *queue*
-* **drive**: Navigates the robot to a pose spectified by the user
-* **return**: return the cart to its pick up position
-* **home**: sends robot to its predefined home position
-* **cancelCurrent**: cancels currently active goal (task)
-* **cancelAll**: cancels all goals (tasks) in the queue of the action server
-* **cancelAtAndBefore**: cancel all goals (tasks) at and before a time stamp (cancellation_stamp) specified by the user
-
-## **Behavior**
-
----
-
-![alt text](img/behavior.png "API Architecture")
-
-Interlock system enables and dsiabels the specific actions that the system can execte
-
 ## **Dynamic Reconfiguration**
 
 ---
 
-![alt text](img/dynamic_reconf.png "API Architecture")
+![alt text](img/dynamic_reconf.png "Dynamic reconfiuration server")
 
-The current interlocks on the robot and the return pose can be modified during runtime using the dynamic reconfigure server. 
+The current interlocks system and the return pose can be modified during runtime using the dynamic reconfigure server. 
 
-*Note*: Please export (on the main PC) the ros master uri of the robot of interest before using this feature.
+*Note*: Please export (on the main PC) the ros master uri of the robot of interest before using this feature. For robot B, for ex, the following commands can be used:
 ```
 export ROS_MASTER_URI=http://192.168.0.202:11311
 rosrun rqt_reconfigure rqt_reconfigure 
 ```
-
 
 ## **Bash Commands**
 
@@ -177,5 +179,7 @@ A possible solution to use the API without motion capture is to publish some pos
 ## **Author**
 
 ---
-Hazem Youssef (hazem.youssef AT tu-dortmund DOT de)
+Hazem Youssef  
+
+(hazem.youssef AT tu-dortmund DOT de)
 
