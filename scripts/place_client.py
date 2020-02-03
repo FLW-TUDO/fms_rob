@@ -189,6 +189,14 @@ class PlaceAction:
                 #self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logerr('[ {} ]: Execution Aborted by Move Base Server!'.format(rospy.get_name()))
+                try:
+                    rospy.wait_for_service('/'+ROBOT_ID+'/move_base/clear_costmaps') # clear cost maps before sending goal to remove false positive obstacles
+                    reset_costmaps = rospy.ServiceProxy('/'+ROBOT_ID+'/move_base/clear_costmaps', Empty)
+                    reset_costmaps()
+                    rospy.loginfo('[ {} ]: Costmaps Cleared Successfully'.format(rospy.get_name())) 
+                except:
+                    rospy.logwarn('[ {} ]: Costmaps Clearing Service Call Failed!'.format(rospy.get_name())) 
+                rospy.sleep(1)
             if (status == 2): # if action execution is preempted
                 #self.reconf_client.update_configuration({"dock": False})
                 #self.act_client.stop_tracking_goal()
