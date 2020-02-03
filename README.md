@@ -118,9 +118,33 @@ uint8 status
 * **cancelAll**: cancels all goals (tasks) in the queue of the action server
 * **cancelAtAndBefore**: cancel all goals (tasks) at and before a time stamp (cancellation_stamp) specified by the user
 
+## **Behavior**
+
+---
+
+![alt text](img/behavior.png "API Architecture")
+
+Interlock system enables and dsiabels the specific actions that the system can execte
+
+## **Dynamic Reconfiguration**
+
+---
+
+![alt text](img/dynamic_reconf.png "API Architecture")
+
+The current interlocks on the robot and the return pose can be modified during runtime using the dynamic reconfigure server. 
+
+*Note*: Please export (on the main PC) the ros master uri of the robot of interest before using this feature.
+```
+export ROS_MASTER_URI=http://192.168.0.202:11311
+rosrun rqt_reconfigure rqt_reconfigure 
+```
+
+
 ## **Bash Commands**
 
 ---
+
 Shell commands to stop the robots immedietly (implemented locally in *bashrc*)
 
 ```
@@ -130,6 +154,7 @@ killA, killB,..., killAll
 ## **Disclaimer**
 
 ---
+
 The package assumes that the robots' position is known through an external source, i.e: a motion capture system. In the robot setup available, the integration of the motion capture data into ROS is provided through the ros_mocap package.  
 A possible solution to use the API without motion capture is to publish some pose data for the robots, carts, and stations of interest on their respective vicon topics directly. Data from actual robot runs can be provided via ROS bags.
 
@@ -137,9 +162,10 @@ A possible solution to use the API without motion capture is to publish some pos
 
 ---
 
-* Adding interlocks for fail-safe operation
-* Adding *home* & *return* actions
-* Testing preemtive requests
+* ~~Adding interlocks for fail-safe operation~~
+* ~~Adding *home* & *return* actions~~
+* ~~Testing preemtive requests~~
+* Implement trajecotry Sharing between robots for dynamic obstacles avoidance
 
 ## **Future Work**
 
