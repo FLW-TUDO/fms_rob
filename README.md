@@ -90,7 +90,7 @@ Port: 8888
 
 Interlock system enables/dsiabels the specific actions that the robot can execte
 
-## **Further Note**
+## **Further Notes**
 
 ---
 
