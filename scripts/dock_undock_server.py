@@ -152,7 +152,7 @@ class DUActionServer:
             if (success_move and success_elev and success_rotate and success_odom_reset and success_se_move):
                 self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
                 try:
-                    self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.27}) # increase obstacle inflation distance after carrying cart
+                    self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.3}) # increase obstacle inflation distance after carrying cart
                     rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
                 except:
                     rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
