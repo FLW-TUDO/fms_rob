@@ -324,7 +324,7 @@ class DUActionServer:
             try:
                 rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
                 time_buffer = time.time()
-                while (time.time() - time_buffer <= 5.5): # solution for elevator bug
+                while (time.time() - time_buffer <= 5.6): # solution for elevator bug
                     if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                         rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
                         success = False
