@@ -2,12 +2,12 @@
 A robot management API that handles the interface between the fleet management system and the lower level operations on the ROBOTNIK rb1_base robots. The entire implementation runs on the robots' side.
 
 ## **Architecture**
----
+
 
 ![alt text](img/architecture.png "API Architecture")
 
 ## **Usage**
----
+
 To interface with the API, the user sends or receives messages via MQTT in JSON format.
 
 ### **MQTT Topics used:**
@@ -107,29 +107,26 @@ uint8 status
 * **cancelAtAndBefore**: cancel all goals (tasks) at and before a time stamp (cancellation_stamp) specified by the user
 
 ## **Bash Commands**
----
+
 Shell commands to stop the robots immedietly (implemented locally in *bashrc*)
 ```
 killA, killB,..., killAll
 ```
 
 ## **Disclaimer**
----
+
 The package assumes that the robots' position is known through an external source, i.e: a motion capture system. In the robot setup available, the integration of the motion capture data into ROS is provided through the ros_mocap package.  
 A possible solution to use the API without motion capture is to publish some pose data for the robots, carts, and stations of interest on their respective vicon topics directly. Data from actual robot runs can be provided via ROS bags.
 
 ## **Roadmap**
----
+
 * Adding interlocks for fail-safe operation
 * Adding *home* & *return* actions
 * Testing preemtive requests
 
 ## **Future Work**
----
+
 * Implement a SMACH state machine architecture to replace / contain current architecture
 * Use *move_base_flex (mbf)* action server for robots' navigation
 
-## **Author**
----
-Hazem Youssef (hazem.youssef AT tu-dortmund DOT de)
 
