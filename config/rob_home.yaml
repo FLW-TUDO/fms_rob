@@ -2,7 +2,7 @@
 robot_home: 
     {
         rb1_base_a: {
-            trans_x: -3.5, 
+            trans_x: 1.5, 
             trans_y: -3.66, 
             trans_z: 0, 
             rot_x: 0, 
@@ -11,7 +11,7 @@ robot_home:
             rot_w: 0.7
             },
         rb1_base_b: {
-            trans_x: -4.2, 
+            trans_x: 0.7, 
             trans_y: -3.66, 
             trans_z: 0, 
             rot_x: 0, 
@@ -20,7 +20,7 @@ robot_home:
             rot_w: 0.7
             },
         rb1_base_c: {
-            trans_x: -4.9, 
+            trans_x: -0.1, 
             trans_y: -3.66, 
             trans_z: 0, 
             rot_x: 0, 
@@ -29,7 +29,7 @@ robot_home:
             rot_w: 0.7
             },
         rb1_base_d: {
-            trans_x: -5.6, 
+            trans_x: -0.9, 
             trans_y: -3.66, 
             trans_z: 0, 
             rot_x: 0, 
