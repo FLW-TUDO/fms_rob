@@ -48,8 +48,8 @@ class vicon_checker:
     def vi_status_check(self):
         #rospy.sleep(1)
         #r = rospy.Rate(10)
-        last_seq_vicon = self.vicon_data.header.seq
         while(True):
+            last_seq_vicon = self.vicon_data.header.seq
             #print(self.vicon_data)
             if(self.pub_flag == False):
                 self.check_msg.data = False
@@ -70,7 +70,7 @@ class vicon_checker:
                 self.check_msg.data = True
                 self.check_pub.publish(self.check_msg)
                 print('Vicon is Online')
-                return  
+                # return  
             #r.sleep()
             rospy.sleep(0.2)
 
