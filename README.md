@@ -4,13 +4,13 @@ A robot management API that handles the interface between the fleet management s
 
 ## **Architecture**
 
----
+
 
 ![alt text](img/architecture_mod.png "API Architecture")
 
 ## **Usage**
 
----
+
 To interface with the API, the user sends or receives messages via MQTT in JSON format.
 
 ### **MQTT Topics used:**
@@ -84,7 +84,7 @@ Port: 8888
 
 ## **Behavior**
 
----
+
 
 ![alt text](img/behavior.png "Behavior flow chart")
 
@@ -92,7 +92,7 @@ Interlock system enables/dsiabels the specific actions that the robot can execte
 
 ## **Further Notes**
 
----
+
 
 To interface **directly** with the action clients, custom ROS messages (namely: *RobActionSelect* & *RobActionStatus*) can be published or received on the following topics:
 
@@ -131,7 +131,7 @@ uint8 status
 
 ## **Dynamic Reconfiguration**
 
----
+
 
 ![alt text](img/dynamic_reconf.png "Dynamic reconfiuration server")
 
@@ -145,7 +145,7 @@ rosrun rqt_reconfigure rqt_reconfigure
 
 ## **Bash Commands**
 
----
+
 
 Shell commands to stop the robots immedietly (implemented locally in *bashrc*)
 
@@ -155,14 +155,14 @@ killA, killB,..., killAll
 
 ## **Disclaimer**
 
----
+
 
 The package assumes that the robots' position is known through an external source, i.e: a motion capture system. In the robot setup available, the integration of the motion capture data into ROS is provided through the ros_mocap package.  
 A possible solution to use the API without motion capture is to publish some pose data for the robots, carts, and stations of interest on their respective vicon topics directly. Data from actual robot runs can be provided via ROS bags.
 
 ## **Roadmap**
 
----
+
 
 * ~~Adding interlocks for fail-safe operation~~
 * ~~Adding *home* & *return* actions~~
@@ -171,15 +171,9 @@ A possible solution to use the API without motion capture is to publish some pos
 
 ## **Future Work**
 
----
+
 
 * Implement a SMACH state machine architecture to replace / contain current architecture
 * Use *move_base_flex (mbf)* action server for robots' navigation
 
-## **Author**
-
----
-Hazem Youssef  
-
-(hazem.youssef AT tu-dortmund DOT de)
 
