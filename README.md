@@ -1,6 +1,6 @@
 # **FMS ROB**
 
-A robot management API that handles the interface between the fleet management system and the lower level operations on the ROBOTNIK rb1_base robots. The entire implementation runs on the robots' side.
+A robot management API that handles the interface between the fleet management system and the lower level operations on the ROBOTNIK rb1_base robots. The entire implementation runs locally on the robots.
 
 ## **Architecture**
 
