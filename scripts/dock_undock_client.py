@@ -88,24 +88,24 @@ class DUActionClient:
             self.action = data.action
             self.direction = data.direction
             goal = dockUndockGoal()
-            return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
-            if(return_flag == True):
-                status = self.act_client.get_state()
-                if (status != 1):
-                    goal.distance = 0.5 # fixed distance when robot moves out from under cart
-                    goal.angle = pi
-                    goal.mode = False # True --> Dock // False --> Undock
-                    goal.direction = self.direction
-                    rospy.loginfo('[ {} ]: Sending Undock goal to action server'.format(rospy.get_name())) 
-                    #self.act_client.send_goal_and_wait(goal) # blocking - Cancellations Not possible
-                    self.act_client.send_goal(goal) # non-blocking
-                    self.status_flag = True
-                else:
-                    rospy.logerr('[ {} ]: Undock Action Rejected! - Already processing an undocking operation'.format(rospy.get_name()))
-                return
+            # return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
+            # if(return_flag == True):
+            status = self.act_client.get_state()
+            if (status != 1):
+                goal.distance = 0.5 # fixed distance when robot moves out from under cart
+                goal.angle = pi
+                goal.mode = False # True --> Dock // False --> Undock
+                goal.direction = self.direction
+                rospy.loginfo('[ {} ]: Sending Undock goal to action server'.format(rospy.get_name())) 
+                #self.act_client.send_goal_and_wait(goal) # blocking - Cancellations Not possible
+                self.act_client.send_goal(goal) # non-blocking
+                self.status_flag = True
             else:
-                rospy.logerr('[ {} ]: Action Rejected! - Invalid Undock Action'.format(rospy.get_name()))
-                return 
+                rospy.logerr('[ {} ]: Undock Action Rejected! - Already processing an undocking operation'.format(rospy.get_name()))
+            return
+            # else:
+            #     rospy.logerr('[ {} ]: Action Rejected! - Invalid Undock Action'.format(rospy.get_name()))
+            #     return 
         else:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
