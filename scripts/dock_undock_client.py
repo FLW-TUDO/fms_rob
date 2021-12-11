@@ -63,6 +63,7 @@ class DUActionClient:
         if (data.action == 'dock'):
             self.command_id = data.command_id # Note: command id is updated only when the action is chosen and not for all sent actions
             self.action = data.action
+            self.direction = data.direction
             goal = dockUndockGoal()
             pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
             if (pick_flag == True):
@@ -71,6 +72,7 @@ class DUActionClient:
                     goal.distance = rospy.get_param('/'+ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
                     goal.angle = pi
                     goal.mode = True # True --> Dock // False --> Undock
+                    goal.direction = self.direction
                     rospy.loginfo('[ {} ]: Sending Dock goal to action server'.format(rospy.get_name())) 
                     #self.act_client.send_goal_and_wait(goal) # blocking
                     self.act_client.send_goal(goal) # non-blocking
@@ -84,6 +86,7 @@ class DUActionClient:
         elif (data.action == 'undock'):
             self.command_id = data.command_id
             self.action = data.action
+            self.direction = data.direction
             goal = dockUndockGoal()
             return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
             if(return_flag == True):
@@ -92,6 +95,7 @@ class DUActionClient:
                     goal.distance = 0.5 # fixed distance when robot moves out from under cart
                     goal.angle = pi
                     goal.mode = False # True --> Dock // False --> Undock
+                    goal.direction = self.direction
                     rospy.loginfo('[ {} ]: Sending Undock goal to action server'.format(rospy.get_name())) 
                     #self.act_client.send_goal_and_wait(goal) # blocking - Cancellations Not possible
                     self.act_client.send_goal(goal) # non-blocking

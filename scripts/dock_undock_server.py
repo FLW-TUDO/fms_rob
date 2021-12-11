@@ -25,6 +25,7 @@ import tf_conversions
 #from std_srvs.srv import Empty
 import dynamic_reconfigure.client
 #import elevator_test
+from fms_rob.srv import dockPose
 
 
 '''
@@ -118,6 +119,7 @@ class DUActionServer:
         dock_distance = goal.distance # distance to be moved under cart
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode # docking or undocking
+        direction = goal.direction
         success_move = False
         success_se_move = False # secondary motion to adjust docking distance
         success_elev = False
@@ -133,22 +135,40 @@ class DUActionServer:
                 rospy.sleep(1) # note: >0.2
             else:
                 rospy.loginfo('[ {} ]: Cart Slot Free'.format(rospy.get_name()))
-            success_se_move = self.do_du_se_move(dock_distance) # pre-motion before cart
+            success_se_move = self.do_du_se_move(direction, dock_distance) # pre-motion before cart
             rospy.sleep(0.2) # wait for complete halt of robot
-            if (success_se_move):
-                success_odom_reset = self.reset_odom() # not needed in time-based docking
-            if (success_odom_reset):
-                self.move_time = 0.92 #1.35
-                self.move_speed = 0.5 #0.35
-                success_move = self.do_du_move(dock_distance/2.0) # move under cart
-                self.save_cart_pose() 
-                rospy.sleep(0.2)
-            if (success_move):
-                success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
-            if (success_elev):
-                self.rot_speed = 0.7 #0.5
+            if direction == 'north':
+                self.rot_speed = 0.5 #0.5
                 self.ang_tolerance = 0.01 #0.002
-                success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
+                # success_rotate = self.do_du_rotate(dock_angle) # rotate without cart
+                success_rotate = True
+                if (success_se_move):
+                    success_odom_reset = self.reset_odom() # not needed in time-based docking
+                if (success_odom_reset):
+                    self.move_time = 0.92 #1.35
+                    self.move_speed = 0.5 #0.35
+                    self.move_tolerance = 0.004
+                    success_move = self.do_du_move(direction, dock_distance/2.0) # move under cart
+                    self.save_cart_pose() 
+                    rospy.sleep(0.2)
+                if (success_move):
+                    success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
+            else: # defalut to south
+                if (success_se_move):
+                    success_odom_reset = self.reset_odom() # not needed in time-based docking
+                if (success_odom_reset):
+                    self.move_time = 0.92 #1.35
+                    self.move_speed = 0.5 #0.35
+                    self.move_tolerance = 0.007
+                    success_move = self.do_du_move(direction, dock_distance/2.0) # move under cart
+                    self.save_cart_pose() 
+                    rospy.sleep(0.2)
+                if (success_move):
+                    success_elev = self.do_du_elev(elev_mode) # raise/lower elevator
+                if (success_elev):
+                    self.rot_speed = 0.7 #0.5
+                    self.ang_tolerance = 0.01 #0.002
+                    success_rotate = self.do_du_rotate(dock_angle) # rotate while picking cart
             if (success_move and success_elev and success_rotate and success_odom_reset and success_se_move):
                 self.klt_num_pub.publish('/vicon/'+self.cart_id+'/'+self.cart_id) # when robot is under cart publish entire vicon topic of cart for ros_mocap reference
                 try:
@@ -169,7 +189,10 @@ class DUActionServer:
             if (success_odom_reset):
                 self.rot_speed = 0.3 #0.5
                 self.ang_tolerance = 0.002 #0.00
-                success_rotate = self.do_du_rotate(dock_angle)
+            # if direction == 'north':
+            #     success_rotate = True
+            # else:
+            success_rotate = self.do_du_rotate(dock_angle)
             if (success_rotate):
                 col_undock_flag = False
                 while (self.collision_detected()):
@@ -179,7 +202,7 @@ class DUActionServer:
                     rospy.sleep(1) # note: >0.2
                 else:
                     rospy.loginfo('[ {} ]: Robot Exit Free'.format(rospy.get_name()))
-                success_move = self.do_du_move(dock_distance)
+                success_move = self.do_du_move(direction, dock_distance)
             if (success_move and success_elev and success_rotate and success_odom_reset):
                 self.klt_num_pub.publish('') # reset robot vicon location for ros_mocap package
                 try:
@@ -209,7 +232,7 @@ class DUActionServer:
             success = False
             return success
 
-    def do_du_se_move(self, distance):
+    def do_du_se_move(self, direction, distance):
         """
         Secondary motion before moving under cart using euclidean distance and a PD controller.
         The aim is to provide accurate docking with the cart and compensate for the errors
@@ -220,7 +243,7 @@ class DUActionServer:
         vel_msg = Twist()
         rospy.loginfo('[ {} ]: Navigating to Secondary Goal'.format(rospy.get_name()))
         se_distance = distance / 2.0
-        goal = self.calc_se_dock_position(se_distance)  ### to be updated as user defined ratio
+        goal = self.calc_se_dock_position(direction, se_distance)  ### to be updated as user defined ratio
         goal_x = goal[0]
         goal_y = goal[1]
         r = rospy.Rate(10)
@@ -248,6 +271,12 @@ class DUActionServer:
         rospy.loginfo('[ {} ]: Secondary Docking Goal Position Reached'.format(rospy.get_name()))
         orientation_error = self.calc_cart_theta() - self.curr_theta
         orientation_error_mod = atan2(sin(orientation_error),cos(orientation_error))
+        if direction == 'north':
+            self.orientation_tolerance = 0.005
+            self.kp_orient = 1.0
+        else:
+            self.orientation_tolerance = 0.009
+            self.kp_orient = 0.6
         while(abs(orientation_error_mod) >= self.orientation_tolerance):
             vel_msg.angular.z = orientation_error * self.kp_orient
             self.vel_pub.publish(vel_msg)
@@ -256,7 +285,7 @@ class DUActionServer:
         rospy.loginfo('[ {} ]: Secondary Docking Goal Orientation Reached'.format(rospy.get_name()))
         return success
 
-    def do_du_move(self, distance):
+    def do_du_move(self, direction, distance):
         """ 
         Final (primary) motion under cart.
         Pleae note that motion under the cart is done blindly without the use of vicon or
@@ -269,18 +298,33 @@ class DUActionServer:
         rospy.loginfo('[ {} ]: Moving under Cart'.format(rospy.get_name())) # periodic logging
         '''odom-based motion docking'''
         # #while(abs(self.odom_coor.position.x) < distance):
-        while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
-            if (self.du_server.is_preempt_requested()):
-                self.du_server.set_preempted()
-                rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
-                success = False
-                return success
-            vel_msg.linear.x = (distance - abs(self.odom_coor.position.x))*self.move_kp #self.move_speed
-            vel_msg.angular.z = 0
-            self.vel_pub.publish(vel_msg)
-            self.feedback.odom_data = self.odom_data
-            self.du_server.publish_feedback(self.feedback)
-            r.sleep()
+        if direction == 'north':
+            while (abs(abs(self.odom_coor.position.x) - distance) > self.move_tolerance):
+                if (self.du_server.is_preempt_requested()):
+                    self.du_server.set_preempted()
+                    rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
+                    success = False
+                    return success
+                print((abs(self.odom_coor.position.x) - distance))
+                vel_msg.linear.x = (abs(self.odom_coor.position.x) - distance)*self.move_kp #self.move_speed
+                vel_msg.angular.z = 0
+                self.vel_pub.publish(vel_msg)
+                self.feedback.odom_data = self.odom_data
+                self.du_server.publish_feedback(self.feedback)
+                r.sleep()
+        else:
+            while((distance - abs(self.odom_coor.position.x)) > self.move_tolerance):
+                if (self.du_server.is_preempt_requested()):
+                    self.du_server.set_preempted()
+                    rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
+                    success = False
+                    return success
+                vel_msg.linear.x = (distance - abs(self.odom_coor.position.x))*self.move_kp #self.move_speed
+                vel_msg.angular.z = 0
+                self.vel_pub.publish(vel_msg)
+                self.feedback.odom_data = self.odom_data
+                self.du_server.publish_feedback(self.feedback)
+                r.sleep()
         '''time-based motion docking'''
         # timer = time.time()
         # while (time.time() - timer < self.move_time):
@@ -409,20 +453,25 @@ class DUActionServer:
         self.odom_data = data   
         self.odom_coor = data.pose.pose
 
-    def calc_se_dock_position(self, se_distance):
+    def calc_se_dock_position(self, direction, distance):
         """
         Calcuation of secondary docking position using the distance between the point calculated 
         by the dock_pose_server and the cart position.
+        Note: dock_pose server is repurposed for calculating the secondary docking position as well as the picking position
         """
-        #goal_x = self.curr_pose_trans_x + (self.cart_pose_x - self.curr_pose_trans_x)/2.0
-        #goal_y = self.curr_pose_trans_y + (self.cart_pose_y - self.curr_pose_trans_y)/2.0
-        # goal_x = self.curr_pose_trans_x + (self.cart_pose_trans[0] - self.curr_pose_trans_x)/2.0
-        # goal_y = self.curr_pose_trans_y + (self.cart_pose_trans[1] - self.curr_pose_trans_y)/2.0
-        #print('Cart Pos: ({}, {})'.format(self.cart_pose_trans[0], self.cart_pose_trans[1]))
-        goal_x = self.cart_pose_trans[0] - (0.50 * cos(self.calc_cart_theta()))
-        goal_y = self.cart_pose_trans[1] - (0.50 * sin(self.calc_cart_theta()))
-        #print('(Goal X, Goal Y): ({}, {})'.format(goal_x, goal_y))
-        return (goal_x, goal_y)
+        # goal_x = self.cart_pose_trans[0] - (0.50 * cos(self.calc_cart_theta()))
+        # goal_y = self.cart_pose_trans[1] - (0.50 * sin(self.calc_cart_theta()))
+        rospy.loginfo('[ {} ]: Calculating Secondary Docking Position'.format(rospy.get_name()))
+        rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
+        try:
+            get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
+            resp = get_goal_offset(self.cart_id, distance, direction)
+            goal = resp.dock_pose
+            
+            rospy.loginfo('[ {} ]: Calculating Secondary Docking Pose Service call Successful'.format(rospy.get_name()))
+            return (goal.position.x, goal.position.y)
+        except rospy.ServiceException:
+            rospy.logerr('[ {} ]: Calculating Secondary Docking Pose Service call Failed!'.format(rospy.get_name()))
 
     def update_pose(self, data):
         """ Robot vicon pose update. """

@@ -8,7 +8,7 @@ the pose published from vicon.
 import rospy
 from geometry_msgs.msg import TransformStamped, Pose
 from std_msgs.msg import Bool
-from math import cos, sin
+from math import cos, sin, pi
 import tf_conversions
 from fms_rob.srv import dockPose
 
@@ -33,6 +33,7 @@ def get_docking_pose(req):
     goal_result = Pose()
     cart_id = req.cart_id
     distance = req.distance
+    direction = req.direction
     rospy.on_shutdown(shutdown_hook)
     topic = ['/vicon/'+cart_id+'/'+cart_id, 'geometry_msgs/TransformStamped']
     if(topic not in rospy.get_published_topics('/vicon/')):
@@ -50,15 +51,26 @@ def get_docking_pose(req):
         rospy.loginfo('[ {} ]: Cart id Goal is {}'.format(rospy.get_name(), cart_id))
         goal_rot = [goal.transform.rotation.x, goal.transform.rotation.y, goal.transform.rotation.z, goal.transform.rotation.w]
         goal_euler = tf_conversions.transformations.euler_from_quaternion(goal_rot)
-        # offset from goal to gurantee proper docking
-        goal_result.position.x = goal.transform.translation.x - (distance * cos(goal_euler[2])) # distance offset from cart
-        goal_result.position.y = goal.transform.translation.y - (distance * sin(goal_euler[2]))
-        # get cart orientation
-        goal_result.orientation.x = goal_rot[0] # same orientation as cart
-        goal_result.orientation.y = goal_rot[1]
-        goal_result.orientation.z = goal_rot[2]
-        goal_result.orientation.w = goal_rot[3]
-        rospy.loginfo('[ {} ]: Docking Pose Calculated'.format(rospy.get_name()))
+        goal_rot_opp = tf_conversions.transformations.quaternion_from_euler(goal_euler[0], goal_euler[1], goal_euler[2]+pi)
+
+        if direction == 'north':
+            # offset from goal to gurantee proper docking
+            goal_result.position.x = goal.transform.translation.x + (distance * cos(goal_euler[2])) # distance offset from cart
+            goal_result.position.y = goal.transform.translation.y + (distance * sin(goal_euler[2]))
+            # get cart orientation
+            goal_result.orientation.x = goal_rot_opp[0] # same orientation as cart
+            goal_result.orientation.y = goal_rot_opp[1]
+            goal_result.orientation.z = goal_rot_opp[2]
+            goal_result.orientation.w = goal_rot_opp[3]
+        else: # defult to south
+            goal_result.position.x = goal.transform.translation.x - (distance * cos(goal_euler[2])) # distance offset from cart
+            goal_result.position.y = goal.transform.translation.y - (distance * sin(goal_euler[2]))
+            # get cart orientation
+            goal_result.orientation.x = goal_rot[0] # same orientation as cart
+            goal_result.orientation.y = goal_rot[1]
+            goal_result.orientation.z = goal_rot[2]
+            goal_result.orientation.w = goal_rot[3]
+        rospy.loginfo('[ {} ]: Docking Pose Calculated with direction: {}'.format(rospy.get_name(), direction))
         return goal_result
         #else:
         #    rospy.loginfo('Cart vicon topic Not updated!')

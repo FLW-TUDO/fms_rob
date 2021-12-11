@@ -79,6 +79,7 @@ class PickAction:
             self.command_id = data.command_id
             self.action = data.action # to be removed after msg modification
             self.cart_id = data.cart_id
+            self.direction = data.direction
             #self.reconf_client.update_configuration({"cart_id": self.cart_id}) # dynamic parameter to share cart_id in between clients at runtime
             self.cart_id_pub.publish(self.cart_id)
             home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
@@ -142,7 +143,7 @@ class PickAction:
         rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
         try:
             get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
-            resp = get_goal_offset(cart_id, self.dock_distance)
+            resp = get_goal_offset(cart_id, self.dock_distance, self.direction)
             rospy.loginfo('[ {} ]: Calculating Docking Pose Service call Successful'.format(rospy.get_name()))
             return resp.dock_pose
         except rospy.ServiceException:

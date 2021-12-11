@@ -1,5 +1,6 @@
 string cart_id
 float64 distance
+string direction
 ---
 geometry_msgs/Pose dock_pose
 

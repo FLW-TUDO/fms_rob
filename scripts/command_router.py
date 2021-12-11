@@ -82,6 +82,7 @@ class CommandRouter:
             command_id = str(mqtt_msg['command_id']) # string for syncing commands 
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
+            direction = mqtt_msg['direction'] # docking direction
             cancellation_stamp = mqtt_msg['cancellation_stamp']
             # pose position
             goal.position.x = mqtt_msg['pose']['position']['x']
@@ -93,9 +94,9 @@ class CommandRouter:
             goal.orientation.z = mqtt_msg['pose']['orientation']['z']
             goal.orientation.w = mqtt_msg['pose']['orientation']['w']
             rospy.loginfo('[ {} ]: MQTT Message Received >>> \n\t Action: {}, \n\t Cart ID: {}, \n\t Station ID: {}, \n\t Bound Mode: {}, \n\t Command ID: {}, \
-                \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, command_id, command_id)) # Goal Pose Not printed for convenience!
+                \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, direction, command_id, cancellation_stamp)) # Goal Pose Not printed for convenience!
             self.control_flag = False
-            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp)
+            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, direction, cancellation_stamp)
         else:
             pass
         return
@@ -105,7 +106,7 @@ class CommandRouter:
         y = yaml.load(str(msg))
         return json.dumps(y,indent=4)
 
-    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, cancellation_stamp):
+    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, direction, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
         if (action == 'drive'):
             rospy.loginfo('[ {} ]: Drive Action Selected'.format(rospy.get_name()))
@@ -121,6 +122,7 @@ class CommandRouter:
             msg.action = 'dock'
             msg.goal = goal
             msg.command_id = command_id
+            msg.direction = direction
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'undock'):
@@ -129,6 +131,7 @@ class CommandRouter:
             msg.action = 'undock'
             msg.goal = goal
             msg.command_id = command_id
+            msg.direction = direction
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'pick'):
@@ -138,6 +141,7 @@ class CommandRouter:
             msg.goal = goal
             msg.command_id = command_id
             msg.cart_id = cart_id
+            msg.direction = direction
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'place'):
