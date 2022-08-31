@@ -93,7 +93,7 @@ class CommandRouter:
             goal.orientation.y = mqtt_msg['pose']['orientation']['y']
             goal.orientation.z = mqtt_msg['pose']['orientation']['z']
             goal.orientation.w = mqtt_msg['pose']['orientation']['w']
-            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n\t Action: {}, \n\t Cart ID: {}, \n\t Station ID: {}, \n\t Bound Mode: {}, \n\t Command ID: {}, \
+            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n\t Action: {}, \n\t Cart ID: {}, \n\t Station ID: {}, \n\t Bound Mode: {}, \n\t Direction: {}, \n\t Command ID: {}, \
                 \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, direction, command_id, cancellation_stamp)) # Goal Pose Not printed for convenience!
             self.control_flag = False
             self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, direction, cancellation_stamp)
