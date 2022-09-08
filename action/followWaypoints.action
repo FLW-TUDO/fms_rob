@@ -1,0 +1,5 @@
+float64[] waypoints
+---
+bool res
+---
+geometry_msgs/TransformStamped vicon_data
