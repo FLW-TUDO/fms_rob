@@ -35,6 +35,7 @@ add_action_files(
 	DIRECTORY action
 	FILES
   dockUndock.action
+  followWaypoints.action
 )
 
 ## Generate added messages, services and actions with any dependencies listed here
