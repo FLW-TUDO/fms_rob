@@ -83,6 +83,7 @@ class CommandRouter:
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
             direction = mqtt_msg['direction'] # docking direction
+            waypoints = mqtt_msg['waypoints'] # waypoints list to follow
             cancellation_stamp = mqtt_msg['cancellation_stamp']
             # pose position
             goal.position.x = mqtt_msg['pose']['position']['x']
@@ -93,10 +94,10 @@ class CommandRouter:
             goal.orientation.y = mqtt_msg['pose']['orientation']['y']
             goal.orientation.z = mqtt_msg['pose']['orientation']['z']
             goal.orientation.w = mqtt_msg['pose']['orientation']['w']
-            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n\t Action: {}, \n\t Cart ID: {}, \n\t Station ID: {}, \n\t Bound Mode: {}, \n\t Direction: {}, \n\t Command ID: {}, \
-                \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, direction, command_id, cancellation_stamp)) # Goal Pose Not printed for convenience!
+            rospy.loginfo('[ {} ]: MQTT Message Received >>> \n\t Action: {}, \n\t Cart ID: {}, \n\t Station ID: {}, \n\t Bound Mode: {}, \n\t Direction: {}, \n\t Waypoints: {}, \n\t Command ID: {}, \
+                \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, direction, waypoints, command_id, cancellation_stamp)) # Goal Pose Not printed for convenience!
             self.control_flag = False
-            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, direction, cancellation_stamp)
+            self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, direction, waypoints, cancellation_stamp)
         else:
             pass
         return
@@ -106,7 +107,7 @@ class CommandRouter:
         y = yaml.load(str(msg))
         return json.dumps(y,indent=4)
 
-    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, direction, cancellation_stamp):
+    def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, direction, waypoints, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
         if (action == 'drive'):
             rospy.loginfo('[ {} ]: Drive Action Selected'.format(rospy.get_name()))
@@ -114,6 +115,7 @@ class CommandRouter:
             msg.action = 'drive'
             msg.goal = goal
             msg.command_id = command_id
+            msg.waypoints = waypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'dock'): 
@@ -142,6 +144,7 @@ class CommandRouter:
             msg.command_id = command_id
             msg.cart_id = cart_id
             msg.direction = direction
+            # msg.waypoints = waypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'place'):
@@ -152,6 +155,7 @@ class CommandRouter:
             msg.command_id = command_id
             msg.station_id = station_id
             msg.bound_mode = bound_mode # inbound, outbound, inbound_queue, outbound_queue
+            msg.waypoints = waypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'home'):
@@ -160,6 +164,7 @@ class CommandRouter:
             msg.action = 'home'
             msg.goal = goal
             msg.command_id = command_id
+            msg.waypoints = waypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'return'):
@@ -168,6 +173,7 @@ class CommandRouter:
             msg.action = 'return'
             msg.goal = goal
             msg.command_id = command_id
+            msg.waypoints = waypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'cancelCurrent'): # cancel current active goal
