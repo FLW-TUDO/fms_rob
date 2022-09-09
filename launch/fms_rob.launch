@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-	<arg name="id_robot" default="rb1_base_b"/>
+	<arg name="id_robot" default="rb1_base_a"/>
 	<param name="ROBOT_ID" type="str" value="$(arg id_robot)"/>
     <rosparam command = "load" file="$(find fms_rob)/config/rob_home.yaml"/> 
 
