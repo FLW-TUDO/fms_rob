@@ -1,4 +1,5 @@
-float64[] waypoints
+float64[] Xwaypoints
+float64[] Ywaypoints
 ---
 bool res
 ---
