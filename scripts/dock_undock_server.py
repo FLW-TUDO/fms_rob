@@ -16,8 +16,8 @@ from geometry_msgs.msg import PoseStamped, TransformStamped, Twist, PointStamped
 from fms_rob.msg import dockUndockAction, dockUndockGoal, dockUndockFeedback, dockUndockResult
 from sensor_msgs.msg import Joy
 from nav_msgs.msg import Odometry
-from robotnik_msgs.srv import set_odometry, set_digital_output
-from rb1_base_msgs.srv import SetElevator
+from robotnik_msgs.srv import set_odometry, set_digital_output, SetElevator
+from robotnik_msgs.msg import ElevatorAction
 #from actionlib_msgs.msg import GoalStatusArray
 from std_msgs.msg import String, Bool, Float32
 from math import pow, atan2, sqrt, cos, sin, pi
@@ -26,8 +26,8 @@ import tf_conversions
 import dynamic_reconfigure.client
 #import elevator_test
 from fms_rob.srv import dockPose
-
-
+import os
+import subprocess
 '''
 #######################################################################################
 '''
@@ -38,6 +38,9 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the 
 #######################################################################################
 '''
 
+#Enabling permissions to .sh files
+os.system('chmod +x elevator_up.sh')
+os.system('chmod +x elevator_down.sh')
 class DUActionServer:
 
     def __init__(self):
@@ -87,7 +90,7 @@ class DUActionServer:
         self.kd_ang = 0.1 #0.1
         self.kp_orient = 0.6 #0.3
         self.kp_trans = 0.8 #0.8    ######
-        self.distance_tolerance = 0.003 #0.003
+        self.distance_tolerance = 0.005 #0.003 #0.003
         self.orientation_tolerance = 0.009 #0.01 #0.02
         current_time = None
         self.sample_time = 0.0001
@@ -358,9 +361,9 @@ class DUActionServer:
             success = False
             return success
         if (mode == True):
-            elev_act = 3
+            elev_act = 1
         else:
-            elev_act = 2 
+            elev_act = -1  
         counter = 1
         while (counter <= attempts):
             if (counter > 1):
@@ -368,15 +371,32 @@ class DUActionServer:
             try:
                 rospy.loginfo('[ {} ]: Moving Elevator'.format(rospy.get_name()))
                 time_buffer = time.time()
-                while (time.time() - time_buffer <= 5.25): # solution for elevator bug
+                while (time.time() - time_buffer <= 5.2): # solution for elevator bug
                     if (self.joy_data.buttons[5] == 1 and (self.joy_data.axes[10] == 1.0 or self.joy_data.axes[10] == -1.0)): # Fuse protection
                         rospy.logwarn('[ {} ]: Elevator motion interupted by joystick!'.format(rospy.get_name()))
                         success = False
                         return success
                         #break 
-                    rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output')
-                    move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_hw/set_digital_output', set_digital_output)
-                    move_elevator(elev_act,True) # 3 --> raise elevator // 2 --> lower elevator
+                    rospy.wait_for_service('/'+ROBOT_ID+'/robotnik_base_control/set_elevator') #### changes on robot A
+                    #rospy.wait_for_service('/'+ROBOT_ID+'/set_elevator') #### changes on robot C
+                   # move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/set_elevator', SetElevator)
+                   # move_elevator(action[1]) # 1 --> raise elevator // -1 --> lower elevator
+                    if elev_act == 1:
+                       #os.system('rosservice call /rb1_base_a/robotnik_base_control/set_elevator "action: action: 1"')
+                       shellscript2 = subprocess.Popen(["/home/rb1/catkin_ws/src/fms_rob/scripts/elevator_up.sh"], stdin=subprocess.PIPE)
+                       shellscript2.stdin.close()
+                       returncode2 = shellscript2.wait()
+                       os.system('echo Elevator upwards')
+                    else:
+                        shellscript = subprocess.Popen(["/home/rb1/catkin_ws/src/fms_rob/scripts/elevator_down.sh"], stdin=subprocess.PIPE)
+                        shellscript.stdin.close()
+                        returncode = shellscript.wait()
+                        os.system('echo Elevator downwards')
+                       #os.system('rosservice call /rb1_base_a/robotnik_base_control/set_elevator "action: action: -1"')
+                    #move_elev= SetElevator.srv.msgRequest()
+                    #move_elev.action = elev_act
+                    #move_elevator = rospy.ServiceProxy('/'+ROBOT_ID+'/robotnik_base_control/set_elevator', SetElevator)
+                    #response = move_elevator(move_elev) # 1 --> raise elevator // -1 --> lower elevator
                 rospy.loginfo('[ {} ]: Elevator Service call Successful'.format(rospy.get_name()))
                 break
             except rospy.ServiceException: 
@@ -388,7 +408,7 @@ class DUActionServer:
                 #self.result.res = False
                 #self.du_server.set_aborted(self.result)
         return success
-    
+
     def do_du_rotate(self, angle):
         """ Execution of robot rotation around its axis. """
         success = True
