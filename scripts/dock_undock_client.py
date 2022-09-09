@@ -66,23 +66,23 @@ class DUActionClient:
             self.direction = data.direction
             goal = dockUndockGoal()
             pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
-            if (pick_flag == True):
-                status = self.act_client.get_state()
-                if (status != 1):
-                    goal.distance = rospy.get_param('/'+ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
-                    goal.angle = pi
-                    goal.mode = True # True --> Dock // False --> Undock
-                    goal.direction = self.direction
-                    rospy.loginfo('[ {} ]: Sending Dock goal to action server'.format(rospy.get_name())) 
-                    #self.act_client.send_goal_and_wait(goal) # blocking
-                    self.act_client.send_goal(goal) # non-blocking
-                    self.status_flag = True
-                else:
-                    rospy.logerr('[ {} ]: Dock Action Rejected! - Already processing a docking operation'.format(rospy.get_name()))
-                return
+            # if (pick_flag == True):
+            status = self.act_client.get_state()
+            if (status != 1):
+                goal.distance = rospy.get_param('/'+ROBOT_ID+'/fms_rob/dock_distance', '1.0') # get specified dock distance specified during picking. Default: 1.0
+                goal.angle = pi
+                goal.mode = True # True --> Dock // False --> Undock
+                goal.direction = self.direction
+                rospy.loginfo('[ {} ]: Sending Dock goal to action server'.format(rospy.get_name())) 
+                #self.act_client.send_goal_and_wait(goal) # blocking
+                self.act_client.send_goal(goal) # non-blocking
+                self.status_flag = True
             else:
-                rospy.logerr('[ {} ]: Action Rejected! - Invalid Dock Action'.format(rospy.get_name()))
-                return
+                rospy.logerr('[ {} ]: Dock Action Rejected! - Already processing a docking operation'.format(rospy.get_name()))
+            return
+            # else:
+            #     rospy.logerr('[ {} ]: Action Rejected! - Invalid Dock Action'.format(rospy.get_name()))
+            #     return
         elif (data.action == 'undock'):
             self.command_id = data.command_id
             self.action = data.action
