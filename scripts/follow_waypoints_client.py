@@ -14,7 +14,7 @@ from fms_rob.msg import RobActionSelect, RobActionStatus
 from actionlib_msgs.msg import GoalStatusArray
 from std_srvs.srv import Empty
 from math import pi
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float64MultiArray
 import dynamic_reconfigure.client
 
 
@@ -45,6 +45,7 @@ class FollowWPActionClient:
         self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.followWP)
         self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/do_follow_waypoints/status', GoalStatusArray, self.status_update) # status from dock_undock action server 
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
+        #self.wp_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_wp', Float64MultiArray, self.update_wp)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
@@ -65,7 +66,10 @@ class FollowWPActionClient:
             self.action = data.action
             self.cart_id= data.cart_id
             self.station_id = data.station_id
-            waypoints = data.waypoints
+            Xwaypoints = data.Xwaypoints
+            Ywaypoints = data.Ywaypoints
+            print(Xwaypoints)
+            print(Ywaypoints)
             goal = followWaypointsGoal()
             pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
             place_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/place')
@@ -77,7 +81,9 @@ class FollowWPActionClient:
             # if (self.action == 'pick' and (home_flag or undock_flag)) or:
                 # status = self.act_client.get_state()
                 # if (status != 1):
-            goal.waypoints = waypoints
+            goal.Xwaypoints = Xwaypoints
+            goal.Ywaypoints = Ywaypoints
+
             rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
             self.act_client.send_goal(goal) # non-blocking
             self.status_flag = True
@@ -115,7 +121,11 @@ class FollowWPActionClient:
         self.return_flag = config['return']
         rospy.loginfo('Parameters updated by dock client') ###
     '''
-        
+
+    def update_wp(self, data):
+        self.waypoints = data
+        print(data)
+
     def status_update(self, data):
         """ Forwarding status messages upstream. """
         if (self.status_flag == True):

@@ -64,6 +64,7 @@ class FollowWPActionServer:
         ''' P-Controller settings for primary motion '''
         self.robot_speed = 0.9
         self.heading_tolerance = 0.5
+        self.distance_tolerance = 0.3
 
         #self.move_speed = 0.09 #0.14
         self.move_kp = 0.99 #0.99
@@ -81,7 +82,7 @@ class FollowWPActionServer:
         self.kd_ang = 0.1 #0.1
         self.kp_orient = 0.6 #0.3
         self.kp_trans = 0.8 #0.8    ######
-        self.distance_tolerance = 0.003 #0.003
+        # self.distance_tolerance = 0.003 #0.003
         self.orientation_tolerance = 0.009 #0.01 #0.02
         current_time = None
         self.sample_time = 0.0001
@@ -106,13 +107,26 @@ class FollowWPActionServer:
         # rospy.sleep(1.5)
         self.result.res = False
 
-        waypoints = goal.waypoints
+        Xwaypoints = goal.Xwaypoints
+        Ywaypoints = goal.Ywaypoints
         success_follow = False
-        print(waypoints)
+        vel_msg = Twist()
 
-        for wp in waypoints:
-            while((abs(self.error_theta) > self.heading_tolerance)): 
-                # Linear velocity in the x-axis.
+        for wp in zip(Xwaypoints, Ywaypoints):
+            while(self.euclidean_distance(wp[0], wp[1]) >= self.distance_tolerance):
+                while((abs(self.error_theta) > self.heading_tolerance)): 
+                    print(wp)
+                    # Linear velocity in the x-axis.
+                    vel_msg.linear.x = 0
+                    vel_msg.linear.y = 0
+                    vel_msg.linear.z = 0
+                    # Angular velocity in the z-axis.
+                    vel_msg.angular.x = 0
+                    vel_msg.angular.y = 0
+                    vel_msg.angular.z = self.angular_vel(wp[0], wp[1])
+                    print(vel_msg)
+                    # Publishing our vel_msg
+                    self.vel_pub.publish(vel_msg)
                 vel_msg.linear.x = self.robot_speed
                 vel_msg.linear.y = 0
                 vel_msg.linear.z = 0
@@ -121,21 +135,18 @@ class FollowWPActionServer:
                 vel_msg.angular.y = 0
                 vel_msg.angular.z = self.angular_vel(wp[0], wp[1])
                 # Publishing our vel_msg
-                self.velocity_publisher.publish(vel_msg)
+                self.vel_pub.publish(vel_msg)
         vel_msg.linear.x = 0
         vel_msg.angular.z = 0
-        self.velocity_publisher.publish(vel_msg)
+        self.vel_pub.publish(vel_msg)
         success_follow = True
 
         if success_follow:
-            if action == 'place':
-                ### TODO: fix robot orientation to match station
-                pass
-            try:
-                self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.3}) # increase obstacle inflation distance after carrying cart
-                rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
-            except:
-                rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
+            # try:
+            #     self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.3}) # increase obstacle inflation distance after carrying cart
+            #     rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
+            # except:
+            #     rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
             self.result.res = True
             self.follow_waypoints_server.set_succeeded(self.result)
         else: 
@@ -180,9 +191,9 @@ class FollowWPActionServer:
         self.cart_pose_rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         self.cart_pose_sub.unregister()
 
-    # def euclidean_distance(self, goal_x, goal_y):
-    #     """ Euclidean distance between current pose and the next way point."""
-    #     return sqrt(pow((goal_x - self.curr_pose_trans_x), 2) + pow((goal_y - self.curr_pose_trans_y), 2))
+    def euclidean_distance(self, goal_x, goal_y):
+        """ Euclidean distance between current pose and the next way point."""
+        return sqrt(pow((goal_x - self.curr_pose_trans_x), 2) + pow((goal_y - self.curr_pose_trans_y), 2))
 
     def goal_angle(self, goal_x, goal_y):
         """ Angle between current orientation and the heading of the next way point. """
