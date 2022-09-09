@@ -6,5 +6,6 @@ string station_id
 string bound_mode
 string direction
 string action
-float64[] waypoints
+float64[] Xwaypoints
+float64[] Ywaypoints
 time cancellation_stamp
