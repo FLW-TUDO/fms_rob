@@ -4,12 +4,13 @@
 
 import rospy
 from geometry_msgs.msg import Pose
-from std_msgs.msg import String
+from std_msgs.msg import String, Float64MultiArray
 import paho.mqtt.client as mqttClient
 import time, sys, json
 #from robotnik_msgs.msg import MQTT_ack
 from fms_rob.msg import RobActionSelect, RobActionStatus, MqttAck
 import yaml
+import pandas as pd
 
 
 '''
@@ -62,6 +63,7 @@ class CommandRouter:
         client.message_callback_add("/robotnik/mqtt_ros_command", self.parse_data) # commands received from user ex: pick, place, etc
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10) # topic to which the parsed action form the user is published
+        self.wp_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_wp', Float64MultiArray, queue_size=10) # topic to which the parsed action form the user is published
         rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update) # subscribes to downstream status messages
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.sleep(1)
@@ -98,6 +100,7 @@ class CommandRouter:
                 \n\t Cancellation timestamp: {}'.format(rospy.get_name(), action, cart_id, station_id, bound_mode, direction, waypoints, command_id, cancellation_stamp)) # Goal Pose Not printed for convenience!
             self.control_flag = False
             self.select_action(action, goal, command_id, cart_id, station_id, bound_mode, direction, waypoints, cancellation_stamp)
+            
         else:
             pass
         return
@@ -144,9 +147,27 @@ class CommandRouter:
             msg.command_id = command_id
             msg.cart_id = cart_id
             msg.direction = direction
+            df = pd.DataFrame(waypoints)
+            msg.Xwaypoints = df[0]
+            msg.Ywaypoints = df[1]
+            
+
+            # wp_msg = Float64MultiArray()
+            # wp_msg.data = waypoints
+            # print(wp_msg.layout)
+            
+            # wp_msg.layout.dim[0].label = "row"
+            # wp_msg.layout.dim[0].size = 10
+            # wp_msg.layout.dim[1].label = "col"
+            # wp_msg.layout.dim[0].size = len(waypoints)
+            # wp_msg.layout.dim[0].stride = 10;
+            
+            
             # msg.waypoints = waypoints
+            #print(waypoints)
             self.control_flag = True
             self.action_pub.publish(msg)
+            #self.wp_pub.publish(wp_msg)
         if (action == 'place'):
             rospy.loginfo('[ {} ]: Place Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
@@ -155,7 +176,9 @@ class CommandRouter:
             msg.command_id = command_id
             msg.station_id = station_id
             msg.bound_mode = bound_mode # inbound, outbound, inbound_queue, outbound_queue
-            msg.waypoints = waypoints
+            df = pd.DataFrame(waypoints)
+            msg.Xwaypoints = df[0]
+            msg.Ywaypoints = df[1]
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'home'):
@@ -164,7 +187,9 @@ class CommandRouter:
             msg.action = 'home'
             msg.goal = goal
             msg.command_id = command_id
-            msg.waypoints = waypoints
+            df = pd.DataFrame(waypoints)
+            msg.Xwaypoints = df[0]
+            msg.Ywaypoints = df[1]
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'return'):
@@ -173,7 +198,9 @@ class CommandRouter:
             msg.action = 'return'
             msg.goal = goal
             msg.command_id = command_id
-            msg.waypoints = waypoints
+            df = pd.DataFrame(waypoints)
+            msg.Xwaypoints = df[0]
+            msg.Ywaypoints = df[1]
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'cancelCurrent'): # cancel current active goal
