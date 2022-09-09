@@ -151,7 +151,7 @@ class FollowWPActionServer:
             self.follow_waypoints_server.set_succeeded(self.result)
         else: 
             self.result.res = False
-            self.du_server.set_aborted(self.result)
+            self.follow_waypoints_server.set_aborted(self.result)
 
     # def collision_update(self, data):
     #     #print(data)
@@ -189,7 +189,7 @@ class FollowWPActionServer:
         #rospy.loginfo_throttle(1, 'getting cart pose')
         self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
         self.cart_pose_rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
-        self.cart_pose_sub.unregister()
+        #self.cart_pose_sub.unregister()
 
     def euclidean_distance(self, goal_x, goal_y):
         """ Euclidean distance between current pose and the next way point."""
@@ -224,7 +224,7 @@ class FollowWPActionServer:
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         try:
-            self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.1}) # original inflation distance: 0.1
+            #self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.1}) # original inflation distance: 0.1
             rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
         except:
             rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
