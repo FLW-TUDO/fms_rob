@@ -43,6 +43,7 @@ class DUActionServer:
     def __init__(self):
         rospy.init_node('dock_undock_server')
         try:
+            print('received')
             self.du_server = actionlib.SimpleActionServer('do_dock_undock', dockUndockAction, self.execute, False) # create dock-undock action server
         except:
             rospy.logerr('[ {} ]: Error Creating Action Server!'.format(rospy.get_name()))
@@ -106,7 +107,8 @@ class DUActionServer:
 
     def execute(self, goal):
         self.control_flag = False
-        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
+        #self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
+        self.cart_id = goal.cart_id
         rospy.sleep(1.5)
         # while (self.control_flag == False):
         #     print('waiting for cart id subscribtion')
@@ -120,6 +122,7 @@ class DUActionServer:
         dock_angle = goal.angle # rotation angle after picking cart
         elev_mode = goal.mode # docking or undocking
         direction = goal.direction
+        
         success_move = False
         success_se_move = False # secondary motion to adjust docking distance
         success_elev = False
