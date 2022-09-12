@@ -85,7 +85,10 @@ class CommandRouter:
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
             direction = mqtt_msg['direction'] # docking direction
-            waypoints = mqtt_msg['waypoints'] # waypoints list to follow
+            if action == 'dock' or action == 'undock':
+                waypoints = None
+            else:
+                waypoints = mqtt_msg['waypoints'] # waypoints list to follow
             cancellation_stamp = mqtt_msg['cancellation_stamp']
             # pose position
             goal.position.x = mqtt_msg['pose']['position']['x']
@@ -117,8 +120,10 @@ class CommandRouter:
             msg = RobActionSelect()
             msg.action = 'drive'
             msg.goal = goal
-            msg.command_id = command_id
-            msg.waypoints = waypoints
+            msg.command_id = command_idgeometry_msgs/Pose
+            df = pd.DataFrame(waypoints)
+            msg.Xwaypoints = df[0]
+            msg.Ywaypoints = df[1]
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'dock'): 
@@ -128,6 +133,7 @@ class CommandRouter:
             msg.goal = goal
             msg.command_id = command_id
             msg.direction = direction
+            msg.cart_id = cart_id
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'undock'):
@@ -137,6 +143,7 @@ class CommandRouter:
             msg.goal = goal
             msg.command_id = command_id
             msg.direction = direction
+            msg.cart_id = cart_id
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'pick'):
