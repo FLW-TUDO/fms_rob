@@ -49,6 +49,13 @@ class FollowWPActionClient:
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+        self.pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
+        self.place_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/place')
+        self.dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
+        self.undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
+        self.return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
+        self.home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
+        
         #self.pick_flag = Bool()
         #self.return_flag = Bool()
         #self.pick_flag = True
@@ -61,38 +68,29 @@ class FollowWPActionClient:
 
     def followWP(self, data):
         """ Executes the follow waypoints """
-        if (data.action == 'pick' or data.action == 'place' or data.action == 'return' or data.action == 'home'):
+        # print("pick flag", self.pick_flag)
+        if (data.action == 'pick' or data.action == 'place' or data.action == 'return' or data.action == 'home' or data.action == 'drive'):
             self.command_id = data.command_id # Note: command id is updated only when the action is chosen and not for all sent actions
             self.action = data.action
             self.cart_id= data.cart_id
             self.station_id = data.station_id
             Xwaypoints = data.Xwaypoints
             Ywaypoints = data.Ywaypoints
-            print(Xwaypoints)
-            print(Ywaypoints)
-            goal = followWaypointsGoal()
-            pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
-            place_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/place')
-            dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
-            undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
-            return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
-            home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
+            #print(Xwaypoints)
+            #print(Ywaypoints)
+            
+            # if self.pick_flag == True and data.action == 'place':
+            #     status = self.act_client.get_state()
+            #     print("status of action" , status)
 
-            # if (self.action == 'pick' and (home_flag or undock_flag)) or:
-                # status = self.act_client.get_state()
-                # if (status != 1):
+            goal = followWaypointsGoal()
             goal.Xwaypoints = Xwaypoints
             goal.Ywaypoints = Ywaypoints
 
             rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
             self.act_client.send_goal(goal) # non-blocking
             self.status_flag = True
-                # else:
-                #     rospy.logerr('[ {} ]: Dock Action Rejected! - Already processing a docking operation'.format(rospy.get_name()))
-                # return
-            # else:
-            #     rospy.logerr('[ {} ]: Action Rejected! - Invalid Dock Action'.format(rospy.get_name()))
-            #     return
+   
         else:
             if (data.action == 'cancelCurrent'):
                 self.act_client.cancel_goal()
@@ -124,7 +122,7 @@ class FollowWPActionClient:
 
     def update_wp(self, data):
         self.waypoints = data
-        print(data)
+        #print(data)
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """
@@ -142,20 +140,33 @@ class FollowWPActionClient:
             msg.station_id = self.station_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful
-                if(msg.action == 'dock'):
-                    rospy.loginfo('[ {} ]: Dock Action Successful'.format(rospy.get_name()))
+                if(msg.action == 'pick'):
+                    rospy.loginfo('[ {} ]: Pick Action Successful'.format(rospy.get_name()))
                     print('--------------------------------')
-                    self.reconf_client.update_configuration({"dock": True})
-                    self.reconf_client.update_configuration({"pick": False})
+                    self.reconf_client.update_configuration({"dock": False})
+                    self.reconf_client.update_configuration({"pick": True})
                     self.reconf_client.update_configuration({"undock": False})
                     self.reconf_client.update_configuration({"home": False})
-                else:
-                    rospy.loginfo('[ {} ]: Undock Action Successful'.format(rospy.get_name()))
+                elif(msg.action == 'place'):
+                    rospy.loginfo('[ {} ]: Place Action Successful'.format(rospy.get_name()))
                     print('--------------------------------')
-                    self.reconf_client.update_configuration({"undock": True})
+                    self.reconf_client.update_configuration({"place": True})
+                    self.reconf_client.update_configuration({"dock": False})
+                    self.reconf_client.update_configuration({"undock": False})
+                elif(msg.action == 'home'):
+                    rospy.loginfo('[ {} ]: Home Action Successful'.format(rospy.get_name()))
+                    print('--------------------------------')
+                    self.reconf_client.update_configuration({"home": True})
+                    self.reconf_client.update_configuration({"dock": False})
+                    self.reconf_client.update_configuration({"undock": False})
                     self.reconf_client.update_configuration({"return": False})
+                else:
+                    rospy.loginfo('[ {} ]: Return Action Successful'.format(rospy.get_name()))
+                    print('--------------------------------')
+                    self.reconf_client.update_configuration({"return": True})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
+                
                 return
             if (status == 4): # if action execution is aborted
                 self.reconf_client.update_configuration({"pick": False})
@@ -168,6 +179,22 @@ class FollowWPActionClient:
                 #self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 rospy.logwarn('[ {} ]: Execution Preempted by user!'.format(rospy.get_name())) 
+
+    def interlocks(self, data):
+        if data.action == 'pick':
+            self.pick_flag = True
+        if data.action == 'place':
+            self.place_flag = True
+        if data.action == 'return':
+            self.return_flag = True
+        if data.action == 'dock':
+            self.dock_flag = True
+        if data.action == 'undock':
+            self.undock_flag = True
+        else:
+            self.home_flag = True
+        status = self.act_client.get_state()
+        rospy.loginfo('[ {} ]: chechking status'.format(rospy.get_name()))
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
