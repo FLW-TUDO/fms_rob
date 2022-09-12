@@ -115,7 +115,7 @@ class FollowWPActionServer:
         for wp in zip(Xwaypoints, Ywaypoints):
             while(self.euclidean_distance(wp[0], wp[1]) >= self.distance_tolerance):
                 while((abs(self.error_theta) > self.heading_tolerance)): 
-                    print(wp)
+                    #print(wp)
                     # Linear velocity in the x-axis.
                     vel_msg.linear.x = 0
                     vel_msg.linear.y = 0
@@ -124,7 +124,7 @@ class FollowWPActionServer:
                     vel_msg.angular.x = 0
                     vel_msg.angular.y = 0
                     vel_msg.angular.z = self.angular_vel(wp[0], wp[1])
-                    print(vel_msg)
+                    #print(vel_msg)
                     # Publishing our vel_msg
                     self.vel_pub.publish(vel_msg)
                 vel_msg.linear.x = self.robot_speed
