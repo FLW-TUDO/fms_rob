@@ -18,6 +18,7 @@ import pandas as pd
 '''
 
 ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the package's launch file
+WaypointMode = rospy.get_param('/Waypoint_Mode') #follow Waypoints mode selection 
 
 '''
 #######################################################################################
@@ -63,7 +64,8 @@ class CommandRouter:
         client.message_callback_add("/robotnik/mqtt_ros_command", self.parse_data) # commands received from user ex: pick, place, etc
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         self.action_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action', RobActionSelect, queue_size=10) # topic to which the parsed action form the user is published
-        self.wp_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_wp', Float64MultiArray, queue_size=10) # topic to which the parsed action form the user is published
+        self.waypointMode = WaypointMode
+        #self.wp_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_wp', bool, queue_size=10) # topic to which the parsed action form the user is published
         rospy.Subscriber('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, self.status_mapping_update) # subscribes to downstream status messages
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.sleep(1)
@@ -77,16 +79,20 @@ class CommandRouter:
             rospy.logerr('[ {} ]: Json Message not correecly Formatted!'.format(rospy.get_name()))
             return
         goal = Pose()
+        
+
         if (mqtt_msg['robot_id'] == ROBOT_ID):
             #print ("Message received: "  + message.payload)
+            
             action = mqtt_msg['action']
             cart_id = mqtt_msg['cart_id'] # cart to be picked
             command_id = str(mqtt_msg['command_id']) # string for syncing commands 
             station_id = mqtt_msg['station_id'] # station to place the cart at
             bound_mode = mqtt_msg['bound_mode'] # position relative to station
             direction = mqtt_msg['direction'] # docking direction
-            if action == 'dock' or action == 'undock':
+            if self.waypointMode != True:
                 waypoints = None
+                print("Normal working mode")
             else:
                 waypoints = mqtt_msg['waypoints'] # waypoints list to follow
             cancellation_stamp = mqtt_msg['cancellation_stamp']
@@ -115,17 +121,26 @@ class CommandRouter:
 
     def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, direction, waypoints, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
+        if waypoints == None:
+            self.Xwaypoints = []
+            self.Ywaypoints = []
+        else:
+            df = pd.DataFrame(waypoints)
+            self.Xwaypoints = df[0]
+            self.Ywaypoints = df[1]
         if (action == 'drive'):
             rospy.loginfo('[ {} ]: Drive Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
             msg.action = 'drive'
             msg.goal = goal
-            msg.command_id = command_idgeometry_msgs/Pose
-            df = pd.DataFrame(waypoints)
-            msg.Xwaypoints = df[0]
-            msg.Ywaypoints = df[1]
+            msg.command_id = command_id
+            msg.Xwaypoints = self.Xwaypoints
+            msg.Ywaypoints = self.Ywaypoints
             self.control_flag = True
             self.action_pub.publish(msg)
+            # mode = WaypointMode()
+            # mode.follow_waypoints = self.waypointMode
+            # self.wp_pub.publish(mode)
         if (action == 'dock'): 
             rospy.loginfo('[ {} ]: Dock Action Selected'.format(rospy.get_name()))
             msg = RobActionSelect()
@@ -154,24 +169,9 @@ class CommandRouter:
             msg.command_id = command_id
             msg.cart_id = cart_id
             msg.direction = direction
-            df = pd.DataFrame(waypoints)
-            msg.Xwaypoints = df[0]
-            msg.Ywaypoints = df[1]
-            
-
-            # wp_msg = Float64MultiArray()
-            # wp_msg.data = waypoints
-            # print(wp_msg.layout)
-            
-            # wp_msg.layout.dim[0].label = "row"
-            # wp_msg.layout.dim[0].size = 10
-            # wp_msg.layout.dim[1].label = "col"
-            # wp_msg.layout.dim[0].size = len(waypoints)
-            # wp_msg.layout.dim[0].stride = 10;
-            
-            
-            # msg.waypoints = waypoints
-            #print(waypoints)
+            msg.Xwaypoints = self.Xwaypoints
+            msg.Ywaypoints = self.Ywaypoints
+            print(msg.Xwaypoints)
             self.control_flag = True
             self.action_pub.publish(msg)
             #self.wp_pub.publish(wp_msg)
@@ -183,9 +183,8 @@ class CommandRouter:
             msg.command_id = command_id
             msg.station_id = station_id
             msg.bound_mode = bound_mode # inbound, outbound, inbound_queue, outbound_queue
-            df = pd.DataFrame(waypoints)
-            msg.Xwaypoints = df[0]
-            msg.Ywaypoints = df[1]
+            msg.Xwaypoints = self.Xwaypoints
+            msg.Ywaypoints = self.Ywaypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'home'):
@@ -194,9 +193,8 @@ class CommandRouter:
             msg.action = 'home'
             msg.goal = goal
             msg.command_id = command_id
-            df = pd.DataFrame(waypoints)
-            msg.Xwaypoints = df[0]
-            msg.Ywaypoints = df[1]
+            msg.Xwaypoints = self.Xwaypoints
+            msg.Ywaypoints = self.Ywaypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'return'):
@@ -205,9 +203,8 @@ class CommandRouter:
             msg.action = 'return'
             msg.goal = goal
             msg.command_id = command_id
-            df = pd.DataFrame(waypoints)
-            msg.Xwaypoints = df[0]
-            msg.Ywaypoints = df[1]
+            msg.Xwaypoints = self.Xwaypoints
+            msg.Ywaypoints = self.Ywaypoints
             self.control_flag = True
             self.action_pub.publish(msg)
         if (action == 'cancelCurrent'): # cancel current active goal
