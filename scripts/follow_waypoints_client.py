@@ -23,7 +23,7 @@ import dynamic_reconfigure.client
 '''
 
 ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the package's launch file
-
+WaypointMode = rospy.get_param('/Waypoint_Mode') #follow Waypoints mode selection 
 '''
 #######################################################################################
 '''
@@ -31,40 +31,43 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the 
 class FollowWPActionClient:
     
     def __init__(self):
-        rospy.init_node('follow_waypoints_client')
-        self.status_flag = False # used to throttle further message sending after action execution
-        self.act_client = actionlib.SimpleActionClient('do_follow_waypoints', followWaypointsAction) 
-        err_flag = False
-        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
-            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
-            pass
+        if WaypointMode == False:
+            exit()
         else:
-            rospy.logerr('[ {} ]: Timedout waiting for Follow Waypoints Server!'.format(rospy.get_name()))
-            err_flag = True        
-        self.act_client.wait_for_server() # wait for server start up
-        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.followWP)
-        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/do_follow_waypoints/status', GoalStatusArray, self.status_update) # status from dock_undock action server 
-        self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
-        #self.wp_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_wp', Float64MultiArray, self.update_wp)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
-        self.pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
-        self.place_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/place')
-        self.dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
-        self.undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
-        self.return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
-        self.home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
-        
-        #self.pick_flag = Bool()
-        #self.return_flag = Bool()
-        #self.pick_flag = True
-        #self.return_flag = True
-        rospy.sleep(1)
-        if not err_flag:
-            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
-        else:
-            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
+            rospy.init_node('follow_waypoints_client')
+            self.status_flag = False # used to throttle further message sending after action execution
+            self.act_client = actionlib.SimpleActionClient('do_follow_waypoints', followWaypointsAction) 
+            err_flag = False
+            if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+                #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+                pass
+            else:
+                rospy.logerr('[ {} ]: Timedout waiting for Follow Waypoints Server!'.format(rospy.get_name()))
+                err_flag = True        
+            self.act_client.wait_for_server() # wait for server start up
+            self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.followWP)
+            self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/do_follow_waypoints/status', GoalStatusArray, self.status_update) # status from dock_undock action server 
+            self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
+            #self.wp_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_wp', Float64MultiArray, self.update_wp)
+            self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+            rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
+            self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+            self.pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
+            self.place_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/place')
+            self.dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
+            self.undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
+            self.return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
+            self.home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
+            
+            #self.pick_flag = Bool()
+            #self.return_flag = Bool()
+            #self.pick_flag = True
+            #self.return_flag = True
+            rospy.sleep(1)
+            if not err_flag:
+                rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+            else:
+                rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
 
     def followWP(self, data):
         """ Executes the follow waypoints """
