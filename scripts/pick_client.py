@@ -27,51 +27,54 @@ import dynamic_reconfigure.client
 '''
 
 ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the package's launch file
-
+WaypointMode = rospy.get_param('/Waypoint_Mode') #follow Waypoints mode selection 
 '''
 #######################################################################################
 '''
 
 class PickAction:
     def __init__(self):
-        rospy.init_node('pick_action_client')
-        self.status_flag = False # used to throttle further message sending after action execution
-        self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
-        rospy.loginfo('Waiting for move_base server')
-        err_flag = False
-        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
-            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
-            pass
+        if WaypointMode == True:
+            exit()
         else:
-            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))   
-            err_flag = True     
-        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
-        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
-        self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10, latch=True) # cart id passed to docking phase - must be latced for future subscribers
-        #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
-        self.dock_distance = 1.0 # min: 1.0
-        rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
-        self.dock_rotate_angle = pi
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
-        rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        #self.home_flag = True
-        #self.undock_flag = True
-        self.reconf_client.update_configuration({'home': True})
-        self.reconf_client.update_configuration({'undock': True})
-        self.reconf_client.update_configuration({'dock': False})
-        self.reconf_client.update_configuration({'pick': False})
-        self.reconf_client.update_configuration({'place': False})
-        self.reconf_client.update_configuration({'home': False})
-        self.reconf_client.update_configuration({'return': False})
-        #rospy.set_param('/dynamic_reconf_server/home', True)
-        #rospy.set_param('/dynamic_reconf_server/undock', True)
-        rospy.sleep(1)
-        if not err_flag:
-            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
-        else:
-            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
+            rospy.init_node('pick_action_client')
+            self.status_flag = False # used to throttle further message sending after action execution
+            self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
+            rospy.loginfo('Waiting for move_base server')
+            err_flag = False
+            if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+                #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+                pass
+            else:
+                rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))   
+                err_flag = True     
+            self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.pick)
+            self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
+            self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
+            self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+            self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10, latch=True) # cart id passed to docking phase - must be latced for future subscribers
+            #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
+            self.dock_distance = 1.0 # min: 1.0
+            rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
+            self.dock_rotate_angle = pi
+            self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+            rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
+            #self.home_flag = True
+            #self.undock_flag = True
+            self.reconf_client.update_configuration({'home': True})
+            self.reconf_client.update_configuration({'undock': True})
+            self.reconf_client.update_configuration({'dock': False})
+            self.reconf_client.update_configuration({'pick': False})
+            self.reconf_client.update_configuration({'place': False})
+            self.reconf_client.update_configuration({'home': False})
+            self.reconf_client.update_configuration({'return': False})
+            #rospy.set_param('/dynamic_reconf_server/home', True)
+            #rospy.set_param('/dynamic_reconf_server/undock', True)
+            rospy.sleep(1)
+            if not err_flag:
+                rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+            else:
+                rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
 
     def pick(self, data):
         """ Executes picking action. """
