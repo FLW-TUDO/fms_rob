@@ -28,39 +28,42 @@ import dynamic_reconfigure.client
 '''
 
 ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the package's launch file
-
+WaypointMode = rospy.get_param('/Waypoint_Mode') #follow Waypoints mode selection 
 '''
 #######################################################################################
 '''
 
 class PlaceAction:
     def __init__(self):
-        rospy.init_node('place_action_client')
-        self.status_flag = False # used to throttle further message sending after action execution
-        self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
-        rospy.loginfo('[ {} ]: Waiting for move_base server'.format(rospy.get_name()))
-        err_flag = False
-        if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
-            #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
-            pass
+        if WaypointMode == True:
+            exit()
         else:
-            rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))  
-            err_flag = True      
-        self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
-        self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
-        self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
-        self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
-        self.park_distance = 1.18 #1.15 #min: 1.02
-        rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
-        self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
-        #self.dock_flag = Bool()
-        #self.dock_flag = True
-        rospy.sleep(1)
-        if not err_flag:
-            rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
-        else:
-            rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
+            rospy.init_node('place_action_client')
+            self.status_flag = False # used to throttle further message sending after action execution
+            self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
+            rospy.loginfo('[ {} ]: Waiting for move_base server'.format(rospy.get_name()))
+            err_flag = False
+            if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
+                #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
+                pass
+            else:
+                rospy.logerr('[ {} ]: Timedout waiting for Move Base Server!'.format(rospy.get_name()))  
+                err_flag = True      
+            self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
+            self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
+            self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
+            self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+            #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
+            self.park_distance = 1.18 #1.15 #min: 1.02
+            rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
+            self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
+            #self.dock_flag = Bool()
+            #self.dock_flag = True
+            rospy.sleep(1)
+            if not err_flag:
+                rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
+            else:
+                rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
     def place(self, data):
         """ Executes the placing operation. """
         if (data.action == 'place'):
