@@ -3,24 +3,39 @@
 
 	<arg name="id_robot" default="rb1_base_b"/>
 	<param name="ROBOT_ID" type="str" value="$(arg id_robot)"/>
-    <param name="Waypoint_Mode" type="bool" value='False'/>
+    <arg name="with_waypoints" default="True"/>
+    <param name="Waypoint_Mode" type="bool" value="$(arg with_waypoints)"/>
     <rosparam command = "load" file="$(find fms_rob)/config/rob_home.yaml"/> 
 
 
 	<group ns="$(arg id_robot)">
-		<node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
-        <node pkg="fms_rob" name="dock_pose_server" type="dock_pose_server.py" output="screen"/>	
-        <node pkg="fms_rob" name="dock_undock_server" type="dock_undock_server.py" output="screen"/>	
-        <node pkg="fms_rob" name="dock_undock_client" type="dock_undock_client.py" output="screen"/>
-        <node pkg="fms_rob" name="follow_waypoints_client" type="follow_waypoints_client.py" output="screen"/>
-        <node pkg="fms_rob" name="follow_waypoints_server" type="follow_waypoints_server.py" output="screen"/>	
-        <node pkg="fms_rob" name="drive_client" type="drive_client.py" output="screen"/>	
-        <node pkg="fms_rob" name="pick_client" type="pick_client.py" output="screen"/>	
-        <node pkg="fms_rob" name="place_client" type="place_client.py" output="screen"/>
-        <node pkg="fms_rob" name="home_client" type="home_client.py" output="screen"/>	
-        <node pkg="fms_rob" name="return_client" type="return_client.py" output="screen"/>		
-        <node pkg="fms_rob" name="park_pose_server" type="park_pose_server.py" output="screen"/>
+        <group if="$(arg with_waypoints)">
+            <node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
+            <node pkg="fms_rob" name="dock_pose_server" type="dock_pose_server.py" output="screen"/>	
+            <node pkg="fms_rob" name="dock_undock_server" type="dock_undock_server.py" output="screen"/>	
+            <node pkg="fms_rob" name="dock_undock_client" type="dock_undock_client.py" output="screen"/>
+            <node pkg="fms_rob" name="follow_waypoints_pick_client" type="pick_client.py" output="screen"/>
+            <node pkg="fms_rob" name="follow_waypoints_place_client" type="place_client.py" output="screen"/>
+            <node pkg="fms_rob" name="follow_waypoints_drive_client" type="drive_client.py" output="screen"/>
+            <node pkg="fms_rob" name="follow_waypoints_return_client" type="return_client.py" output="screen"/>
+            <node pkg="fms_rob" name="follow_waypoints_home_client" type="home_client.py" output="screen"/>
+            <node pkg="fms_rob" name="follow_waypoints_server" type="follow_waypoints_server.py" output="screen"/>
+        </group>
+        <group unless="$(arg with_waypoints)">
+		    <node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
+            <node pkg="fms_rob" name="dock_pose_server" type="dock_pose_server.py" output="screen"/>	
+            <node pkg="fms_rob" name="dock_undock_server" type="dock_undock_server.py" output="screen"/>	
+            <node pkg="fms_rob" name="dock_undock_client" type="dock_undock_client.py" output="screen"/>
+            <!-- <node pkg="fms_rob" name="follow_waypoints_client" type="follow_waypoints_client.py" output="screen"/> -->
+            <node pkg="fms_rob" name="drive_client" type="drive_client.py" output="screen"/>	
+            <node pkg="fms_rob" name="pick_client" type="pick_client.py" output="screen"/>	
+            <node pkg="fms_rob" name="place_client" type="place_client.py" output="screen"/>
+            <node pkg="fms_rob" name="home_client" type="home_client.py" output="screen"/>	
+            <node pkg="fms_rob" name="return_client" type="return_client.py" output="screen"/>		
+            <node pkg="fms_rob" name="park_pose_server" type="park_pose_server.py" output="screen"/>
+        </group>
         <node pkg="fms_rob" name="dynamic_reconf_server" type="dynamic_reconf_server.py" output="screen"/>		
 	</group>
-	
+
+    
 </launch>
