@@ -20,6 +20,7 @@
             <node pkg="fms_rob" name="follow_waypoints_return_client" type="return_client.py" output="screen"/>
             <node pkg="fms_rob" name="follow_waypoints_home_client" type="home_client.py" output="screen"/>
             <node pkg="fms_rob" name="follow_waypoints_server" type="follow_waypoints_server.py" output="screen"/>
+            <node pkg="fms_rob" name="park_pose_server" type="park_pose_server.py" output="screen"/>
         </group>
         <group unless="$(arg with_waypoints)">
 		    <node pkg="fms_rob" name="command_router" type="command_router.py" output="screen"/>	
