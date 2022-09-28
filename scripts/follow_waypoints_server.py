@@ -96,23 +96,35 @@ class FollowWPActionServer:
         self.start_msg = Bool()
         #self.theta_msg = Float32()
         #self.cart_id = String()
+       
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
 
-    def execute(self, goal):
-        self.control_flag = False
+    def execute(self, data):
+        self.action = data.action
+        print('Action', self.action)
+        self.control_flag = False            
+        try:
+           self.cart_pose_sub = rospy.Subscriber(self.klt_num, TransformStamped, self.update_cart_pose) # obtaining picked cart id pose
+           print('klt num', self.klt_num)
+        except:
+            print('No cart ID')
+
+        rospy.sleep(1.5)
         # self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
         # rospy.sleep(1.5)
-        # self.cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose) # obtaining picked cart id pose
+        # self.cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose) # obtaining picked cart id pose
         # rospy.sleep(1.5)
         self.result.res = False
 
-        Xwaypoints = goal.Xwaypoints
-        Ywaypoints = goal.Ywaypoints
+        Xwaypoints = data.Xwaypoints
+        Ywaypoints = data.Ywaypoints
         success_follow = False
         vel_msg = Twist()
 
+        #print('Current X:' + str(self.curr_pose_trans_x), '\t' 'Current Y: ' + str(self.curr_pose_trans_y), '\t' 'Current Theta: ' + str(self.curr_theta))
+            
         for wp in zip(Xwaypoints, Ywaypoints):
             while(self.euclidean_distance(wp[0], wp[1]) >= self.distance_tolerance):
                 while((abs(self.error_theta) > self.heading_tolerance)): 
@@ -125,7 +137,6 @@ class FollowWPActionServer:
                     vel_msg.angular.x = 0
                     vel_msg.angular.y = 0
                     vel_msg.angular.z = self.angular_vel(wp[0], wp[1])
-                    #print(vel_msg)
                     # Publishing our vel_msg
                     self.vel_pub.publish(vel_msg)
                 vel_msg.linear.x = self.robot_speed
@@ -154,43 +165,42 @@ class FollowWPActionServer:
             self.result.res = False
             self.follow_waypoints_server.set_aborted(self.result)
 
-    # def collision_update(self, data):
-    #     #print(data)
-    #     self.collision_point_x = data.point.x
-    #     self.collision_point_y = data.point.y
-    #     self.curr_col_seq = data.header.seq
-
-    # def collision_detected(self):
-    #     #self.last_col_seq = data.header.seq
-    #     if (self.curr_col_seq > self.last_col_seq):
-    #         self.last_col_seq = self.curr_col_seq
-    #         if ((self.collision_point_x <= self.collision_tolerance_x) and (self.collision_point_y <= self.collision_tolerance_y)\
-    #         and (self.collision_point_y > -1*self.collision_tolerance_y)):                
-    #             rospy.logerr('[ {} ]: Collision Detected'.format(rospy.get_name()))
-    #             return True
-    #         else:
-    #             return False
-
-
-    def update_pose(self, data):
+    def update_vicon_pose(self, data):
         """ Robot vicon pose update. """
-        self.curr_pose_trans_x = data.transform.translation.x
-        self.curr_pose_trans_y = data.transform.translation.y
+        self.vicon_pose_trans_x = data.transform.translation.x
+        self.vicon_pose_trans_y = data.transform.translation.y
+        #print(self.curr_pose_trans_x, self.curr_pose_trans_y)
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
-        self.curr_theta = rot_euler[2]
-    
+        self.vicon_theta = rot_euler[2]
+        self.curr_pose_trans_x = self.vicon_pose_trans_x
+        self.curr_pose_trans_y = self.vicon_pose_trans_y
+        self.curr_theta = self.vicon_theta    
+
+    def klt_update(self, data):
+        self.klt_num = data.data
+
     # def update_cart_id(self, data):
     #     self.cart_id = data.data
     #     #self.control_flag = True
     #     rospy.loginfo_throttle(1, '[ {} ]: Cart id updated to {}'.format(rospy.get_name(), self.cart_id))
     #     #self.cart_id_sub.unregister()
 
-    def get_cart_pose(self, data):
+    def update_cart_pose(self, data):
         #rospy.loginfo_throttle(1, 'getting cart pose')
-        self.cart_pose_trans = [data.transform.translation.x, data.transform.translation.y]
-        self.cart_pose_rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
-        #self.cart_pose_sub.unregister()
+        cart_pose_trans_x = data.transform.translation.x
+        cart_pose_trans_y = data.transform.translation.y
+        rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
+        rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
+        cart_theta = rot_euler[2] 
+        # self.cart_pose_sub.unregister()
+        self.curr_pose_trans_x = cart_pose_trans_x
+        self.curr_pose_trans_y = cart_pose_trans_y
+        self.curr_theta = cart_theta
+        rospy.loginfo_throttle(1, 'Cart pose is being updated!')
+        if self.action == 'home':
+            self.cart_pose_sub.unregister()
+            print('Topic unregistered')
 
     def euclidean_distance(self, goal_x, goal_y):
         """ Euclidean distance between current pose and the next way point."""
