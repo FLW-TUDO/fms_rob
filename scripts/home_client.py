@@ -187,7 +187,7 @@ class FollowWPHomeActionClient:
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
 
-        self.dock_rotate_angle = pi
+        #self.dock_rotate_angle = pi
         self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         
@@ -210,6 +210,7 @@ class FollowWPHomeActionClient:
             goal = followWaypointsGoal()
             goal.Xwaypoints = Xwaypoints
             goal.Ywaypoints = Ywaypoints
+            goal.action = data.action
 
             rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
             self.act_client.send_goal(goal) # non-blocking

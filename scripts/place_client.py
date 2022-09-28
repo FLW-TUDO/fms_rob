@@ -276,22 +276,33 @@ class FollowWPPlaceActionClient:
             self.action = data.action
             self.cart_id= data.cart_id
             self.station_id = data.station_id
-            Xwaypoints = data.Xwaypoints
-            Ywaypoints = data.Ywaypoints
-            #print(Xwaypoints)
-            #print(Ywaypoints)
+            dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
+            if (dock_flag == True):
+                Xwaypoints = data.Xwaypoints
+                Ywaypoints = data.Ywaypoints
+                
+                #print(Xwaypoints)
+                #print(Ywaypoints)
             
-            # if self.pick_flag == True and data.action == 'place':
-            #     status = self.act_client.get_state()
-            #     print("status of action" , status)
+                # if self.pick_flag == True and data.action == 'place':
+                #     status = self.act_client.get_state()
+                #     print("status of action" , status)
 
-            goal = followWaypointsGoal()
-            goal.Xwaypoints = Xwaypoints
-            goal.Ywaypoints = Ywaypoints
+                goal = followWaypointsGoal()
+                goal.Xwaypoints = Xwaypoints
+                goal.Ywaypoints = Ywaypoints
+                goal.action = data.action
+                # goal.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+                # goal.target_pose.header.stamp = rospy.Time.now()
 
-            rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
-            self.act_client.send_goal(goal) # non-blocking
-            self.status_flag = True
+                # print(goal)
+
+                rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
+                self.act_client.send_goal(goal) # non-blocking
+                self.status_flag = True
+            else:
+                rospy.logerr('[ {} ]: Action Rejected! - Invalid Place Action'.format(rospy.get_name()))
+                return
    
         else:
             if (data.action == 'cancelCurrent'):
@@ -326,6 +337,7 @@ class FollowWPPlaceActionClient:
         self.waypoints = data
         #print(data)
 
+    
     def status_update(self, data):
         """ Forwarding status messages upstream. """
         if (self.status_flag == True):
@@ -336,28 +348,30 @@ class FollowWPPlaceActionClient:
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
             msg.status = status
-            msg.command_id = self.command_id
+            msg.command_id = self.command_id # to be removed after msg modification
             msg.action = self.action # to be removed after msg modification
-            msg.cart_id = self.cart_id
+            msg.station_id = self.station_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful 
                 rospy.loginfo('[ {} ]: Place Action Successful'.format(rospy.get_name()))
                 print('--------------------------------')
-                self.reconf_client.update_configuration({'pick': True})
-                self.act_client.stop_tracking_goal()
-                self.status_flag = False
-                return
-            if (status == 4): # if action execution is aborted
-                #self.reconf_client.update_configuration({'pick': False})
+                #self.reconf_client.update_configuration({"dock": False})
+                self.reconf_client.update_configuration({"place": True})
+                #self.reconf_client.update_configuration({"dock": False})
                 #self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logerr('[ {} ]: Execution Aborted by Follow waypoints Server!'.format(rospy.get_name()))
+                return  
+            if (status == 4): # if action execution is aborted
+                #self.reconf_client.update_configuration({"dock": False})
+                #self.act_client.stop_tracking_goal()
+                self.status_flag = False
                 rospy.sleep(1)
             if (status == 2): # if action execution is preempted
                 #self.reconf_client.update_configuration({"dock": False})
                 #self.act_client.stop_tracking_goal()
                 self.status_flag = False
-                rospy.logwarn('[ {} ]: Execution Preempted by user!'.format(rospy.get_name())) 
+                rospy.logwarn('[ {} ]: Execution Preempted by user!'.format(rospy.get_name()))           
+
     
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package

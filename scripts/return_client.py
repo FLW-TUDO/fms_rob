@@ -263,6 +263,7 @@ class FollowWPReturnActionClient:
             goal = followWaypointsGoal()
             goal.Xwaypoints = Xwaypoints
             goal.Ywaypoints = Ywaypoints
+            goal.action = data.action
 
             rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
             self.act_client.send_goal(goal) # non-blocking

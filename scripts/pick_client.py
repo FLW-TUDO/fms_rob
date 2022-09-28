@@ -12,7 +12,7 @@ import actionlib
 import sys
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Pose, TransformStamped
-from fms_rob.msg import RobActionSelect, RobActionStatus, followWaypointsAction, followWaypointsGoal
+from fms_rob.msg import RobActionSelect, RobActionStatus, followWaypointsAction, followWaypointsGoal, dockUndockAction, dockUndockGoal
 from fms_rob.srv import  dockPose
 from actionlib_msgs.msg import GoalStatusArray
 from std_msgs.msg import String
@@ -52,7 +52,7 @@ class PickAction:
         self.cart_id_pub = rospy.Publisher('/'+ROBOT_ID+'/pick_cart_id', String, queue_size=10, latch=True) # cart id passed to docking phase - must be latced for future subscribers
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
         self.dock_distance = 1.0 # min: 1.0
-        rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
+        rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dockk_distance) # docking distance infront of cart, before secondary docking motion
         self.dock_rotate_angle = pi
         self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
@@ -208,7 +208,8 @@ class FollowWPPickActionClient:
     def __init__(self):
         rospy.init_node('follow_waypoints_pick_client')
         self.status_flag = False # used to throttle further message sending after action execution
-        self.act_client = actionlib.SimpleActionClient('do_follow_waypoints', followWaypointsAction) 
+        self.act_client = actionlib.SimpleActionClient('do_follow_waypoints', followWaypointsAction)
+        self.act_client_do_pose = actionlib.SimpleActionClient('do_dock_undock', dockUndockAction) 
         err_flag = False
         if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
             #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
@@ -222,6 +223,9 @@ class FollowWPPickActionClient:
         self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream
         #self.wp_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_wp', Float64MultiArray, self.update_wp)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
+        self.dock_distance = 1.0 # min: 1.0
+        rospy.set_param('/'+ROBOT_ID+'/fms_rob/dock_distance', self.dock_distance) # docking distance infront of cart, before secondary docking motion
+        self.dock_rotate_angle = pi
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         # self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         # self.pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
@@ -241,7 +245,7 @@ class FollowWPPickActionClient:
         # else:
         #     rospy.logerr('[ {} ]: Not Ready!'.format(rospy.get_name()))
 
-        self.dock_rotate_angle = pi
+
         self.reconf_client = dynamic_reconfigure.client.Client("dynamic_reconf_server", timeout=30) # client of fms_rob dynmaic reconfigure server
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         #self.home_flag = True
@@ -269,22 +273,29 @@ class FollowWPPickActionClient:
             self.action = data.action
             self.cart_id= data.cart_id
             self.station_id = data.station_id
-            Xwaypoints = data.Xwaypoints
-            Ywaypoints = data.Ywaypoints
-            #print(Xwaypoints)
-            #print(Ywaypoints)
-            
-            # if self.pick_flag == True and data.action == 'place':
-            #     status = self.act_client.get_state()
-            #     print("status of action" , status)
+            self.direction = data.direction
+            home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
+            undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
+            if ((home_flag == True) or (undock_flag == True)):
+                #print('calculating docking position for cart_id: {}'.format(self.cart_id)) ###
+                
+                Xwaypoints = data.Xwaypoints
+                Ywaypoints = data.Ywaypoints
+                #print(Xwaypoints)
+                #print(Ywaypoints)
+                
+                # if self.pick_flag == True and data.action == 'place':
+                #     status = self.act_client.get_state()
+                #     print("status of action" , status)
 
-            goal = followWaypointsGoal()
-            goal.Xwaypoints = Xwaypoints
-            goal.Ywaypoints = Ywaypoints
+                goal = followWaypointsGoal()
+                goal.Xwaypoints = Xwaypoints
+                goal.Ywaypoints = Ywaypoints
+                goal.action = data.action               
 
-            rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
-            self.act_client.send_goal(goal) # non-blocking
-            self.status_flag = True
+                rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
+                self.act_client.send_goal(goal) # non-blocking
+                self.status_flag = True
    
         else:
             if (data.action == 'cancelCurrent'):
@@ -318,6 +329,21 @@ class FollowWPPickActionClient:
     def update_wp(self, data):
         self.waypoints = data
         #print(data)
+    
+    def calc_dock_position(self, cart_id):
+        """ Calls a service to calculate the pick position infront of the desired cart. """
+        rospy.loginfo('[ {} ]: Calculating Docking Position'.format(rospy.get_name()))
+        #print('Cart id received is: {}'.format(cart_id))
+        rospy.wait_for_service('/'+ROBOT_ID+'/get_docking_pose')
+        try:
+            get_goal_offset = rospy.ServiceProxy('/'+ROBOT_ID+'/get_docking_pose', dockPose)
+            resp = get_goal_offset(cart_id, self.dock_distance, self.direction)
+            rospy.loginfo('[ {} ]: Calculating Docking Pose Service call Successful'.format(rospy.get_name()))
+            return resp.dock_pose
+        except rospy.ServiceException:
+            rospy.logerr('[ {} ]: Calculating Docking Pose Service call Failed!'.format(rospy.get_name()))
+
+    
 
     def status_update(self, data):
         """ Forwarding status messages upstream. """
@@ -339,6 +365,11 @@ class FollowWPPickActionClient:
                 self.reconf_client.update_configuration({'pick': True})
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
+                # dock_pose = self.calc_dock_position(self.cart_id)
+                # print(dock_pose)
+                # self.cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.get_cart_pose)
+                
+                
                 return
             if (status == 4): # if action execution is aborted
                 #self.reconf_client.update_configuration({'pick': False})
