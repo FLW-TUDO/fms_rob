@@ -96,6 +96,8 @@ class CommandRouter:
             else:
                 waypoints = mqtt_msg['waypoints'] # waypoints list to follow
             cancellation_stamp = mqtt_msg['cancellation_stamp']
+        
+                
             # pose position
             goal.position.x = mqtt_msg['pose']['position']['x']
             goal.position.y = mqtt_msg['pose']['position']['y']
@@ -121,7 +123,7 @@ class CommandRouter:
 
     def select_action(self, action, goal, command_id, cart_id, station_id, bound_mode, direction, waypoints, cancellation_stamp):
         """ Reroutes parsed actions sent from user to the interested (corresponding) clients. """
-        if waypoints == None:
+        if waypoints == None or waypoints == []:
             self.Xwaypoints = []
             self.Ywaypoints = []
         else:
@@ -147,6 +149,8 @@ class CommandRouter:
             msg.action = 'dock'
             msg.goal = goal
             msg.command_id = command_id
+            self.Xwaypoints = []
+            self.Ywaypoints = []
             msg.direction = direction
             msg.cart_id = cart_id
             self.control_flag = True
@@ -157,6 +161,8 @@ class CommandRouter:
             msg.action = 'undock'
             msg.goal = goal
             msg.command_id = command_id
+            self.Xwaypoints = []
+            self.Ywaypoints = []
             msg.direction = direction
             msg.cart_id = cart_id
             self.control_flag = True
