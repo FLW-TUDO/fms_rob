@@ -41,7 +41,8 @@ class FollowWPActionServer:
         # self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
-        self.pose_sub = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_pose) ####
+        self.klt_num_sub = rospy.Subscriber('/'+ROBOT_ID+'/klt_num', String, self.klt_update)
+        self.pose_sub = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_vicon_pose) ####
         # self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         try:
             self.reconf_client = dynamic_reconfigure.client.Client('dynamic_reconf_server', timeout=30) # client of fms_rob dynmaic reconfigure server
@@ -63,7 +64,7 @@ class FollowWPActionServer:
         self.last_col_seq = 0
         ''' P-Controller settings for primary motion '''
         self.robot_speed = 0.9
-        self.heading_tolerance = 0.5
+        self.heading_tolerance = 0.7
         self.distance_tolerance = 0.3
 
         #self.move_speed = 0.09 #0.14
