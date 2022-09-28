@@ -308,7 +308,6 @@ class DUActionServer:
                     rospy.logwarn('[ {} ]: Goal preempted'.format(rospy.get_name()))
                     success = False
                     return success
-                print((abs(self.odom_coor.position.x) - distance))
                 vel_msg.linear.x = (abs(self.odom_coor.position.x) - distance)*self.move_kp #self.move_speed
                 vel_msg.angular.z = 0
                 self.vel_pub.publish(vel_msg)
