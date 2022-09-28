@@ -1,5 +1,6 @@
 float64[] Xwaypoints
 float64[] Ywaypoints
+string action
 ---
 bool res
 ---
