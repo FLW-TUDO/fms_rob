@@ -200,7 +200,10 @@ class FollowWPActionServer:
         rospy.loginfo_throttle(1, 'Cart pose is being updated!')
         if self.action == 'home':
             self.cart_pose_sub.unregister()
-            print('Topic unregistered')
+            self.curr_pose_trans_x = self.vicon_pose_trans_x
+            self.curr_pose_trans_y = self.vicon_pose_trans_y
+            self.curr_theta = self.vicon_theta  
+            #print('Topic unregistered')
 
     def euclidean_distance(self, goal_x, goal_y):
         """ Euclidean distance between current pose and the next way point."""
