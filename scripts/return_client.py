@@ -42,6 +42,7 @@ class ReturnAction:
             self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.followWP)
             self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/do_follow_waypoints/status', GoalStatusArray, self.status_update) # status from follow waypoints server
             self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) # publishes status msgs upstream 
+            self.act_client_move_base = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
             rospy.loginfo('Waiting for follow_waypoints server'.format(rospy.get_name()))
             err_flag = False
             if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
@@ -161,6 +162,15 @@ class ReturnAction:
             rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
             self.act_client.send_goal(goal) # non-blocking
             self.status_flag = True
+
+            
+
+            # goal.target_pose.pose.position.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_x')
+            # goal.target_pose.pose.position.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_y')
+            # goal.target_pose.pose.orientation.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_x')
+            # goal.target_pose.pose.orientation.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
+            # goal.target_pose.pose.orientation.z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
+            # goal.target_pose.pose.orientation.w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
    
         else:
             if (data.action == 'cancelCurrent'):
@@ -215,8 +225,21 @@ class ReturnAction:
                 self.reconf_client.update_configuration({"return": True})
                 self.reconf_client.update_configuration({"place": False})
                 self.reconf_client.update_configuration({"dock": False})
+                goal_target = MoveBaseGoal()
+                goal_target.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+                goal_target.target_pose.header.stamp = rospy.Time.now()
+                goal_target.target_pose.pose.position.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_x')
+                goal_target.target_pose.pose.position.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_y')
+                goal_target.target_pose.pose.orientation.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_x')
+                goal_target.target_pose.pose.orientation.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
+                goal_target.target_pose.pose.orientation.z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
+                goal_target.target_pose.pose.orientation.w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
+                rospy.loginfo('[ {} ]: Acquiring proper pose after reaching goal'.format(rospy.get_name()))
+                self.act_client_move_base.send_goal(goal_target) # non-blocking
+                rospy.sleep(5)
                 self.act_client.stop_tracking_goal()
                 self.status_flag = False
+
                 return
             if (status == 4): # if action execution is aborted
                 #self.reconf_client.update_configuration({"place": False})
