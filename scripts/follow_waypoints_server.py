@@ -17,7 +17,7 @@ from std_msgs.msg import String, Bool, Float32
 from math import pow, atan2, sqrt, cos, sin, pi
 import tf_conversions
 import dynamic_reconfigure.client
-
+from fms_rob.srv import dockPose
 
 '''
 #######################################################################################
@@ -28,6 +28,9 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the 
 '''
 #######################################################################################
 '''
+goal = TransformStamped()
+#pose_updated = Bool()
+pose_sub = None
 
 class FollowWPActionServer:
 
@@ -96,6 +99,7 @@ class FollowWPActionServer:
         self.start_msg = Bool()
         #self.theta_msg = Float32()
         #self.cart_id = String()
+        
        
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
@@ -152,6 +156,7 @@ class FollowWPActionServer:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         success_follow = True
+        
 
         if success_follow:
             # try:
@@ -232,6 +237,13 @@ class FollowWPActionServer:
             self.output = self.p_term_ang + (self.kd_ang * self.d_term_ang)
         return self.output
 
+    def get_vicon_pose(data):
+        """ Returns the location of the cart in Vicon. """
+        global goal, pose_sub
+        goal = data
+        #pose_updated = True
+        pose_sub.unregister() #avoids previous cart id persistence
+
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         try:
@@ -244,6 +256,7 @@ class FollowWPActionServer:
 if __name__ == '__main__':
     try:
         fwp = FollowWPActionServer()
+        
     except KeyboardInterrupt:
         sys.exit()
         #rospy.logerr('Interrupted!')

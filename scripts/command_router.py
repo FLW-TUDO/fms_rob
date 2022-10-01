@@ -18,7 +18,7 @@ import pandas as pd
 '''
 
 ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the package's launch file
-WaypointMode = rospy.get_param('/Waypoint_Mode') #follow Waypoints mode selection 
+WaypointMode = rospy.get_param('/'+ROBOT_ID+'/Waypoint_Mode') #follow Waypoints mode selection 
 
 '''
 #######################################################################################
