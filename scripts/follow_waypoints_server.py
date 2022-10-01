@@ -28,9 +28,9 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the 
 '''
 #######################################################################################
 '''
-goal = TransformStamped()
-#pose_updated = Bool()
-pose_sub = None
+# goal = TransformStamped()
+# #pose_updated = Bool()
+# pose_sub = None
 
 class FollowWPActionServer:
 
@@ -202,7 +202,7 @@ class FollowWPActionServer:
         self.curr_pose_trans_x = cart_pose_trans_x
         self.curr_pose_trans_y = cart_pose_trans_y
         self.curr_theta = cart_theta
-        rospy.loginfo_throttle(1, 'Cart pose is being updated!')
+        #rospy.loginfo_throttle(1, 'Cart pose is being updated!')
         if self.action == 'home':
             self.cart_pose_sub.unregister()
             print('Topic unregistered')
@@ -237,12 +237,12 @@ class FollowWPActionServer:
             self.output = self.p_term_ang + (self.kd_ang * self.d_term_ang)
         return self.output
 
-    def get_vicon_pose(data):
-        """ Returns the location of the cart in Vicon. """
-        global goal, pose_sub
-        goal = data
-        #pose_updated = True
-        pose_sub.unregister() #avoids previous cart id persistence
+    # def get_vicon_pose(data):
+    #     """ Returns the location of the cart in Vicon. """
+    #     global goal, pose_sub
+    #     goal = data
+    #     #pose_updated = True
+    #     pose_sub.unregister() #avoids previous cart id persistence
 
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
