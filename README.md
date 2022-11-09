@@ -45,7 +45,7 @@ Port: 8888
 ```
 {
 "robot_id": "rb1_base_b",
-"command_id": "task123",
+"command_id": "",
 "pose": {
 "position": {
 "x": 0,
@@ -58,11 +58,14 @@ Port: 8888
 "z": 0,
 "w": 1
 }},
-"action": "pick",
-"cart_id": "KLT_6_neu",
+"waypoints": [],
+"action": "place",
+"cart_id": "KLT_7_neu",
 "station_id": "AS_5_neu",
 "bound_mode": "inbound",
-"cancellation_stamp": 1571949975.18291
+"direction":"south",
+"cancellation_stamp": 0,
+"ref_frame": "vicon_world"
 }
 ```
 
