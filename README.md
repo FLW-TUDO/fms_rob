@@ -185,7 +185,7 @@ A possible solution to use the API without motion capture is to publish some pos
 * ~~Adding interlocks for fail-safe operation~~
 * ~~Adding *home* & *return* actions~~
 * ~~Testing preemtive requests~~
-* ~~Implement trajecotry Sharing between robots for dynamic obstacles avoidance~~ (Implemented as separate package. Please check DTEB planner: [Paper](https://ieeexplore.ieee.org/document/9811762 and [Code] (https://github.com/chungym/distributed_teb_multi_robot)
+* ~~Implement trajecotry Sharing between robots for dynamic obstacles avoidance~~ (Implemented as separate package. Please check DTEB planner: [Paper](https://ieeexplore.ieee.org/document/9811762) and [Code](https://github.com/chungym/distributed_teb_multi_robot)
 
 ## **Future Work**
 
