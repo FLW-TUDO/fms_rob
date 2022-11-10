@@ -150,6 +150,12 @@ rosrun rqt_reconfigure rqt_reconfigure
 
 
 
+Command to open a set of terminals that ssh into the robots and call all necessary launch files for a typical scenario run (implemented as bash commands inside the Layout of the Terminator)
+
+```
+fmsRob
+```
+
 Shell commands to stop the robots immedietly (implemented locally in *bashrc*)
 
 ```
@@ -170,7 +176,7 @@ A possible solution to use the API without motion capture is to publish some pos
 * ~~Adding interlocks for fail-safe operation~~
 * ~~Adding *home* & *return* actions~~
 * ~~Testing preemtive requests~~
-* Implement trajecotry Sharing between robots for dynamic obstacles avoidance
+* ~~Implement trajecotry Sharing between robots for dynamic obstacles avoidance~~ (Implemented as separate package. Please check DTEB planner: https://ieeexplore.ieee.org/document/9811762 and https://github.com/chungym/distributed_teb_multi_robot)
 
 ## **Future Work**
 
@@ -179,4 +185,12 @@ A possible solution to use the API without motion capture is to publish some pos
 * Implement a SMACH state machine architecture to replace / contain current architecture
 * Use *move_base_flex (mbf)* action server for robots' navigation
 
+
+## **Contributors**
+
+
+* Hazem Youssef
+
+* Anay Ghatpande
+* Lokeshwaran Manohar
 
