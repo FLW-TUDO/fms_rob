@@ -2,6 +2,9 @@
 
 A robot management API that handles the interface between the fleet management system and the lower level operations on the ROBOTNIK rb1_base robots. The entire implementation runs locally on the robots.
 
+&nbsp;
+**Please refer to the documentation on the most recent branch [follow_waypoint_devel](https://github.com/FLW-TUDO/fms_rob/tree/follow_waypoints_devel)**
+
 ## **Architecture**
 
 
@@ -9,7 +12,6 @@ A robot management API that handles the interface between the fleet management s
 ![alt text](img/architecture_mod.png "API Architecture")
 
 ## **Usage**
-
 
 To interface with the API, the user sends or receives messages via MQTT in JSON format.
 
@@ -66,7 +68,7 @@ Port: 8888
 }
 ```
 
-*Note*: To send MQTT commands, simple apps can be used such as MQTTLens on Google Chrome (https://chrome.google.com/webstore/detail/mqttlens/hemojaaeigabkbcookmlgmdigohjobjm?hl=en)
+*Note*: To send MQTT commands, simple apps can be used such as [MQTTLens] (https://chrome.google.com/webstore/detail/mqttlens/hemojaaeigabkbcookmlgmdigohjobjm?hl=en) on Google Chrome
 
 ### **Possible actions:**
 
