@@ -93,6 +93,15 @@ Port: 8888
 
 Interlock system enables/dsiabels the specific actions that the robot can execte
 
+&nbsp;
+
+The behavior could be changed between follow waypoint behavior (mere following of given trajectory with constant velocity and a P-controller for the angle) to using all functionalities of the fleet management system (interfacing with the navigation stack, park and dock pose calculations, etc) via setting the boolean argument
+
+```
+with_waypoints
+```
+in the fms_rob.launch file
+
 ## **Further Notes**
 
 
@@ -190,7 +199,6 @@ A possible solution to use the API without motion capture is to publish some pos
 
 
 * Hazem Youssef
-
 * Anay Ghatpande
 * Lokeshwaran Manohar
 
