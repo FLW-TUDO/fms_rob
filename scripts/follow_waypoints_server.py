@@ -164,38 +164,30 @@ class FollowWPActionServer:
         """ Robot vicon pose update. """
         self.vicon_pose_trans_x = data.transform.translation.x
         self.vicon_pose_trans_y = data.transform.translation.y
-        #print(self.curr_pose_trans_x, self.curr_pose_trans_y)
         rot=[data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
         self.vicon_theta = rot_euler[2]
-        self.curr_pose_trans_x = self.vicon_pose_trans_x
-        self.curr_pose_trans_y = self.vicon_pose_trans_y
-        self.curr_theta = self.vicon_theta    
+        if self.action == 'pick' or self.action == 'home' or self.klt_num == '':
+            self.curr_pose_trans_x = self.vicon_pose_trans_x
+            self.curr_pose_trans_y = self.vicon_pose_trans_y
+            self.curr_theta = self.vicon_theta    
 
     def klt_update(self, data):
         self.klt_num = data.data
-
-    # def update_cart_id(self, data):
-    #     self.cart_id = data.data
-    #     #self.control_flag = True
-    #     rospy.loginfo_throttle(1, '[ {} ]: Cart id updated to {}'.format(rospy.get_name(), self.cart_id))
-    #     #self.cart_id_sub.unregister()
+    
+    def get_cart_id(self, data):
+        self.cart_id = data.data
 
     def update_cart_pose(self, data):
-        #rospy.loginfo_throttle(1, 'getting cart pose')
         cart_pose_trans_x = data.transform.translation.x
         cart_pose_trans_y = data.transform.translation.y
         rot = [data.transform.rotation.x, data.transform.rotation.y, data.transform.rotation.z, data.transform.rotation.w]
         rot_euler = tf_conversions.transformations.euler_from_quaternion(rot)
         cart_theta = rot_euler[2] 
-        # self.cart_pose_sub.unregister()
-        self.curr_pose_trans_x = cart_pose_trans_x
-        self.curr_pose_trans_y = cart_pose_trans_y
-        self.curr_theta = cart_theta
-        #rospy.loginfo_throttle(1, 'Cart pose is being updated!')
-        if self.action == 'home':
-            self.cart_pose_sub.unregister()
-            print('Topic unregistered')
+        if self.action == 'place' or self.action == 'return' or self.klt_num != '':
+            self.curr_pose_trans_x = cart_pose_trans_x
+            self.curr_pose_trans_y = cart_pose_trans_y
+            self.curr_theta = cart_theta
 
     def euclidean_distance(self, goal_x, goal_y):
         """ Euclidean distance between current pose and the next way point."""
