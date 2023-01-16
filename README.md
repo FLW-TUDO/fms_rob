@@ -6,7 +6,9 @@ A robot management API that handles the interface between the fleet management s
 
 
 
-![alt text](img/architecture_mod.png "API Architecture")
+![alt text](img/architecture_2.png "API Architecture")
+
+Architecture flowchart was created using [Mermaid](https://github.com/mermaid-js/mermaid) package.
 
 ## **Usage**
 
