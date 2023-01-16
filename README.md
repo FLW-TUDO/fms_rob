@@ -45,7 +45,7 @@ Port: 8888
 ```
 {
 "robot_id": "rb1_base_b",
-"command_id": "task123",
+"command_id": "",
 "pose": {
 "position": {
 "x": 0,
@@ -58,15 +58,18 @@ Port: 8888
 "z": 0,
 "w": 1
 }},
-"action": "pick",
-"cart_id": "KLT_6_neu",
+"waypoints": [],
+"action": "place",
+"cart_id": "KLT_7_neu",
 "station_id": "AS_5_neu",
 "bound_mode": "inbound",
-"cancellation_stamp": 1571949975.18291
+"direction":"south",
+"cancellation_stamp": 0,
+"ref_frame": "vicon_world"
 }
 ```
 
-*Note*: To send MQTT commands, simple apps can be used such as MQTTLens on Google Chrome (https://chrome.google.com/webstore/detail/mqttlens/hemojaaeigabkbcookmlgmdigohjobjm?hl=en)
+*Note*: To send MQTT commands, simple apps can be used such as [MQTTLens](https://chrome.google.com/webstore/detail/mqttlens/hemojaaeigabkbcookmlgmdigohjobjm?hl=en)on Google Chrome 
 
 ### **Possible actions:**
 
@@ -89,6 +92,15 @@ Port: 8888
 ![alt text](img/behavior.png "Behavior flow chart")
 
 Interlock system enables/dsiabels the specific actions that the robot can execte
+
+&nbsp;
+
+The behavior could be changed between follow waypoint behavior (mere following of given trajectory with constant velocity and a P-controller for the angle) to using all functionalities of the fleet management system (interfacing with the navigation stack, park and dock pose calculations, etc) via setting the boolean argument
+
+```
+with_waypoints
+```
+in the fms_rob.launch file
 
 ## **Further Notes**
 
@@ -147,6 +159,12 @@ rosrun rqt_reconfigure rqt_reconfigure
 
 
 
+Command to open a set of terminals that ssh into the robots and call all necessary launch files for a typical scenario run (implemented as bash commands inside the Layout of the Terminator)
+
+```
+fmsRob
+```
+
 Shell commands to stop the robots immedietly (implemented locally in *bashrc*)
 
 ```
@@ -167,7 +185,7 @@ A possible solution to use the API without motion capture is to publish some pos
 * ~~Adding interlocks for fail-safe operation~~
 * ~~Adding *home* & *return* actions~~
 * ~~Testing preemtive requests~~
-* Implement trajecotry Sharing between robots for dynamic obstacles avoidance
+* ~~Implement trajecotry Sharing between robots for dynamic obstacles avoidance~~ (Implemented as separate package. Please check DTEB planner: [Paper](https://ieeexplore.ieee.org/document/9811762) and [Code](https://github.com/chungym/distributed_teb_multi_robot)
 
 ## **Future Work**
 
@@ -176,4 +194,11 @@ A possible solution to use the API without motion capture is to publish some pos
 * Implement a SMACH state machine architecture to replace / contain current architecture
 * Use *move_base_flex (mbf)* action server for robots' navigation
 
+
+## **Contributors**
+
+
+* Hazem Youssef
+* Anay Ghatpande
+* Lokeshwaran Manohar
 
