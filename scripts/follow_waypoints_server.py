@@ -28,24 +28,25 @@ ROBOT_ID = rospy.get_param('/ROBOT_ID') # by default the robot id is set in the 
 '''
 #######################################################################################
 '''
-# goal = TransformStamped()
-# #pose_updated = Bool()
-# pose_sub = None
+
 
 class FollowWPActionServer:
 
     def __init__(self):
         rospy.init_node('follow_waypoints_server')
+        self.action = None
         try:
             self.follow_waypoints_server = actionlib.SimpleActionServer('do_follow_waypoints', followWaypointsAction, self.execute, False) # create dock-undock action server
         except:
             rospy.logerr('[ {} ]: Error Creating Action Server!'.format(rospy.get_name()))
         self.follow_waypoints_server.start()
+        self.klt_num = ''
         # self.odom_sub = rospy.Subscriber('/'+ROBOT_ID+'/dummy_odom', Odometry, self.get_odom) # dummy odom is the remapped odom topic - please check ros_mocap package
         self.vel_pub = rospy.Publisher('/'+ROBOT_ID+'/move_base/cmd_vel', Twist, queue_size=10)
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         self.klt_num_sub = rospy.Subscriber('/'+ROBOT_ID+'/klt_num', String, self.klt_update)
         self.pose_sub = rospy.Subscriber('/vicon/'+ROBOT_ID+'/'+ROBOT_ID, TransformStamped, self.update_vicon_pose) ####
+        self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.get_cart_id) # cart id subscribed from pick client - must be latced for future subscribers
         # self.joystick_sub = rospy.Subscriber('/'+ROBOT_ID+'/joy', Joy, self.joy_update)
         try:
             self.reconf_client = dynamic_reconfigure.client.Client('dynamic_reconf_server', timeout=30) # client of fms_rob dynmaic reconfigure server
@@ -156,14 +157,29 @@ class FollowWPActionServer:
         vel_msg.angular.z = 0
         self.vel_pub.publish(vel_msg)
         success_follow = True
-        
 
+        if self.action == 'return' :
+            theta_goal = self.get_cart_return_orientation()
+        if self.action == 'place' :
+            theta_goal = self.get_cart_workstation_orientation(station_id)
+            
         if success_follow:
-            # try:
-            #     self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.3}) # increase obstacle inflation distance after carrying cart
-            #     rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
-            # except:
-            #     rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
+            if self.action == 'return' or self.action == 'place':
+                rospy.loginfo('[ {} ]: Correcting Orientation'. format(rospy.get_name())) 
+                print(theta_goal)    
+                print(self.orientation_error_theta)
+                while((abs(self.orientation_error_theta) > self.cart_orientation_tolerance)): 
+                    # Linear velocity in the x-axis.
+                    vel_msg.linear.x = 0
+                    vel_msg.linear.y = 0
+                    vel_msg.linear.z = 0
+                    # Angular velocity in the z-axis.
+                    vel_msg.angular.x = 0
+                    vel_msg.angular.y = 0
+                    vel_msg.angular.z = self.orientation_controller(theta_goal)
+                    # Publishing our vel_msg
+                    self.vel_pub.publish(vel_msg)
+                rospy.loginfo('[ {} ]: Orientation Corrected Successfully!'. format(rospy.get_name()))
             self.result.res = True
             self.follow_waypoints_server.set_succeeded(self.result)
         else: 
@@ -236,18 +252,38 @@ class FollowWPActionServer:
             self.last_error_theta = self.error_theta
             self.output = self.p_term_ang + (self.kd_ang * self.d_term_ang)
         return self.output
+    
+    def get_cart_return_orientation(self):
+        cart_ortientation_x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_x')
+        cart_ortientation_y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
+        cart_ortientation_z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
+        cart_ortientation_w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
+        rot_euler = tf_conversions.transformations.euler_from_quaternion([cart_ortientation_x, cart_ortientation_y, cart_ortientation_z, cart_ortientation_w])
+        cart_return_theta = rot_euler[2]  
+        return cart_return_theta
+    
+    def get_cart_workstation_orientation(self, station_id):
+        self.station_pose = TransformStamped()
+        station_pose_sub = rospy.Subscriber('/vicon/'+station_id+'/'+station_id, TransformStamped, self.get_station_pose)
+        rospy.sleep(1) #waits for completion of topic subscribtion   
+        station_pose_quat = [self.station_pose.transform.rotation.x, self.station_pose.transform.rotation.y, self.station_pose.transform.rotation.z, self.station_pose.transform.rotation.w]
+        rot_euler = tf_conversions.transformations.euler_from_quaternion(station_pose_quat)
+        station_theta = rot_euler[2]
+        return station_theta
 
-    # def get_vicon_pose(data):
-    #     """ Returns the location of the cart in Vicon. """
-    #     global goal, pose_sub
-    #     goal = data
-    #     #pose_updated = True
-    #     pose_sub.unregister() #avoids previous cart id persistence
+    def get_station_pose(self, data):
+        """ Returns the location of the station in Vicon. """
+        self.station_pose = data
+
+    def orientation_controller(self, theta):
+        self.orientation_error_theta = theta - self.curr_theta
+        self.orientation_error_theta = atan2(sin(self.orientation_error_theta), cos(self.orientation_error_theta))
+        orientation_control_signal = self.orientation_error_theta * self.kp_orientation
+        return orientation_control_signal
 
     def shutdown_hook(self):
         self.klt_num_pub.publish('') # resets the picked up cart number in the ros_mocap package
         try:
-            #self.teb_reconf_client.update_configuration({"min_obstacle_dist": 0.1}) # original inflation distance: 0.1
             rospy.loginfo('[ {} ]: Inflation distance updated successfully'. format(rospy.get_name()))
         except:
             rospy.logerr('[ {} ]: Inflation distance update Failed!'.format(rospy.get_name))
