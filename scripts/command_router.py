@@ -95,7 +95,6 @@ class CommandRouter:
                 print("Normal working mode")
             else:
                 waypoints = mqtt_msg['waypoints'] # waypoints list to follow
-                # orientation = mqtt_msg['orientation'] # orientation of the final pose
             cancellation_stamp = mqtt_msg['cancellation_stamp']
         
                 

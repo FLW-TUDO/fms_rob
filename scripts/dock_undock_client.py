@@ -64,8 +64,8 @@ class DUActionClient:
             self.command_id = data.command_id # Note: command id is updated only when the action is chosen and not for all sent actions
             self.action = data.action
             self.direction = data.direction
-            self.cart_id = data.cart_id
-            #print(cart_id)
+            cart_id = data.cart_id
+            print(cart_id)
             goal = dockUndockGoal()
             pick_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/pick')
             if (pick_flag == True):
@@ -75,7 +75,7 @@ class DUActionClient:
                     goal.angle = pi
                     goal.mode = True # True --> Dock // False --> Undock
                     goal.direction = self.direction
-                    goal.cart_id = self.cart_id
+                    goal.cart_id = cart_id
                     rospy.loginfo('[ {} ]: Sending Dock goal to action server'.format(rospy.get_name())) 
                     print(goal)
                     #self.act_client.send_goal_and_wait(goal) # blocking
@@ -151,7 +151,6 @@ class DUActionClient:
             msg.status = status
             msg.command_id = self.command_id
             msg.action = self.action # to be removed after msg modification
-            msg.cart_id  = self.cart_id
             self.action_status_pub.publish(msg)
             if (status == 3): # if action execution is successful
                 if(msg.action == 'dock'):
