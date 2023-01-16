@@ -56,39 +56,22 @@ class FollowWPActionServer:
         #     self.teb_reconf_client = dynamic_reconfigure.client.Client('/'+ROBOT_ID+'/move_base/TebLocalPlannerROS', timeout=30)
         # except:
         #     rospy.logerr('TEB Planner is Not running!')
-        '''collision detector settings'''
-        # self.col_detector_sub = rospy.Subscriber('/'+ROBOT_ID+'/robotnik_safety_controller/warning_collision_point', PointStamped, self.collision_update)
-        #self.collision_point = PointStamped()
-        #self.collision_tolerance = PointStamped()
-        self.collision_point_x = float('inf')
-        self.collision_point_y = float('inf')
-        self.collision_tolerance_x = 0.7 # 0.75
-        self.collision_tolerance_y = 0.02 # 0.4
-        self.curr_col_seq = 0
-        self.last_col_seq = 0
-        ''' P-Controller settings for primary motion '''
+       
+        ''' P-Controller settings for orientation modification '''
         self.robot_speed = 0.9
         self.heading_tolerance = 0.7
         self.distance_tolerance = 0.3
-
-        #self.move_speed = 0.09 #0.14
-        self.move_kp = 0.99 #0.99
-        #self.rot_kp = 0.99 #0.99
-        #self.rot_speed = 0.4 #0.5
-        self.move_tolerance = 0.007 #0.005
-        #self.ang_tolerance = 0.002 #0.002
+        self.cart_orientation_tolerance = 0.1 #0.2
+        self.kp_orientation = 0.7
+        self.orientation_error_theta = 1.0
+    
         self.feedback = followWaypointsFeedback()
         self.result = followWaypointsResult()
-        ''' PD-Controller settings for secondary move '''
+        
+        ''' PD-Controller settings for waypoints following '''
         self.error_theta = 1.0 #1.0
-        #self.theta_tolerance = 0.007 #0.007
-        #self.theta_tolerance = 0.0''2
         self.kp_ang = 0.7 #0.7 
         self.kd_ang = 0.1 #0.1
-        self.kp_orient = 0.6 #0.3
-        self.kp_trans = 0.8 #0.8    ######
-        # self.distance_tolerance = 0.003 #0.003
-        self.orientation_tolerance = 0.009 #0.01 #0.02
         current_time = None
         self.sample_time = 0.0001
         self.current_time = current_time if current_time is not None else time.time()
@@ -96,44 +79,35 @@ class FollowWPActionServer:
         self.p_term_ang = 0.0
         self.d_term_ang = 0.0
         self.last_error_theta = 0.0
-        self.output = 0.0
-        self.start_msg = Bool()
-        #self.theta_msg = Float32()
-        #self.cart_id = String()
-        
-       
+        self.output = 0.0      
         rospy.sleep(1)
         rospy.on_shutdown(self.shutdown_hook) # used to reset the interface with the ros_mocap package
         rospy.loginfo('[ {} ]: Ready'.format(rospy.get_name()))
 
     def execute(self, data):
+        station_id = data.station_id
+        print('station id', station_id)
         self.action = data.action
         print('Action', self.action)
-        self.control_flag = False            
+        self.control_flag = False   
+        self.orientation_error_theta = 1.0         
         try:
-           self.cart_pose_sub = rospy.Subscriber(self.klt_num, TransformStamped, self.update_cart_pose) # obtaining picked cart id pose
-           print('klt num', self.klt_num)
+            self.cart_pose_sub = rospy.Subscriber(self.klt_num, TransformStamped, self.update_cart_pose) # obtaining picked cart id pose
+            print('klt num', self.klt_num)
         except:
             print('No cart ID')
 
         rospy.sleep(1.5)
-        # self.cart_id_sub = rospy.Subscriber('/'+ROBOT_ID+'/pick_cart_id', String, self.update_cart_id) # obtaining cart id from picking node
-        # rospy.sleep(1.5)
-        # self.cart_pose_sub = rospy.Subscriber('/vicon/'+self.cart_id+'/'+self.cart_id, TransformStamped, self.update_cart_pose) # obtaining picked cart id pose
-        # rospy.sleep(1.5)
         self.result.res = False
 
         Xwaypoints = data.Xwaypoints
         Ywaypoints = data.Ywaypoints
         success_follow = False
         vel_msg = Twist()
-
-        #print('Current X:' + str(self.curr_pose_trans_x), '\t' 'Current Y: ' + str(self.curr_pose_trans_y), '\t' 'Current Theta: ' + str(self.curr_theta))
             
         for wp in zip(Xwaypoints, Ywaypoints):
             while(self.euclidean_distance(wp[0], wp[1]) >= self.distance_tolerance):
                 while((abs(self.error_theta) > self.heading_tolerance)): 
-                    #print(wp)
                     # Linear velocity in the x-axis.
                     vel_msg.linear.x = 0
                     vel_msg.linear.y = 0
@@ -236,10 +210,6 @@ class FollowWPActionServer:
         current_time = None
         self.error_theta = self.goal_angle(goal_x, goal_y) - self.curr_theta
         self.error_theta = atan2(sin(self.error_theta), cos(self.error_theta)) # angle sign regulation
-        #print('Goal angle: {}'.format(self.goal_angle(goal_x, goal_y)))
-        #print('Current angle: {}'.format(self.curr_theta))
-        #print('Error angle: {}'.format(self.error_theta))
-        #self.theta_msg = self.error_theta
         self.current_time = current_time if current_time is not None else time.time()
         delta_time = self.current_time - self.last_time
         delta_error = self.error_theta - self.last_error_theta
