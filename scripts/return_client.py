@@ -210,7 +210,21 @@ class ReturnAction:
         if (self.status_flag == True):
             #print(data.status_list[1].status) # All status list info are at indices 0 and 1
             status = self.act_client.get_state()
+            # if (status == 3):
+            #     goal_target = MoveBaseGoal()
+            #     goal_target.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
+            #     goal_target.target_pose.header.stamp = rospy.Time.now()
+            #     goal_target.target_pose.pose.position.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_x')
+            #     goal_target.target_pose.pose.position.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_y')
+            #     goal_target.target_pose.pose.orientation.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_x')
+            #     goal_target.target_pose.pose.orientation.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
+            #     goal_target.target_pose.pose.orientation.z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
+            #     goal_target.target_pose.pose.orientation.w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
+            #     rospy.loginfo('[ {} ]: Acquiring proper pose after reaching goal'.format(rospy.get_name()))
+            #     self.act_client_move_base.send_goal(goal_target) # non-blocking
+            #     self.act_client.stop_tracking_goal()
             #print(status)
+            # rospy.sleep(1)
             rospy.loginfo('[ {} ] >>> Status: {} '.format(rospy.get_name(), status))
             msg = RobActionStatus()
             #self.act_client.stop_tracking_goal()
@@ -225,19 +239,6 @@ class ReturnAction:
                 self.reconf_client.update_configuration({"return": True})
                 self.reconf_client.update_configuration({"place": False})
                 self.reconf_client.update_configuration({"dock": False})
-                goal_target = MoveBaseGoal()
-                goal_target.target_pose.header.frame_id = "vicon_world" # Always send goals in reference to vicon_world when using ros_mocap package
-                goal_target.target_pose.header.stamp = rospy.Time.now()
-                goal_target.target_pose.pose.position.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_x')
-                goal_target.target_pose.pose.position.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_trans_y')
-                goal_target.target_pose.pose.orientation.x = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_x')
-                goal_target.target_pose.pose.orientation.y = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_y')
-                goal_target.target_pose.pose.orientation.z = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_z')
-                goal_target.target_pose.pose.orientation.w = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return_pose_rot_w')
-                rospy.loginfo('[ {} ]: Acquiring proper pose after reaching goal'.format(rospy.get_name()))
-                self.act_client_move_base.send_goal(goal_target) # non-blocking
-                rospy.sleep(5)
-                self.act_client.stop_tracking_goal()
                 self.status_flag = False
 
                 return
