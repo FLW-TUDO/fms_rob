@@ -36,8 +36,8 @@ WaypointMode = rospy.get_param('/'+ROBOT_ID+'/Waypoint_Mode') #follow Waypoints 
 class PlaceAction:
     def __init__(self):
         rospy.init_node('place_action_client')
+        self.status_flag = False # used to throttle further message sending after action execution
         if WaypointMode == True:
-            self.status_flag = False # used to throttle further message sending after action execution
             rospy.loginfo('Waypoints follower mode enabled')
             self.act_client = actionlib.SimpleActionClient('do_follow_waypoints', followWaypointsAction)
             self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.followWP)
@@ -51,19 +51,18 @@ class PlaceAction:
                 rospy.logerr('[ {} ]: Timedout waiting for follow waypoints Server!'.format(rospy.get_name()))  
                 err_flag = True   
         else:
-            self.status_flag = False # used to throttle further message sending after action execution
             self.act_client = actionlib.SimpleActionClient('/'+ROBOT_ID+'/move_base', MoveBaseAction) 
             rospy.loginfo('[ {} ]: Waiting for move_base server'.format(rospy.get_name()))
             self.action_sub = rospy.Subscriber('/'+ROBOT_ID+'/rob_action', RobActionSelect, self.place)
             self.status_update_sub = rospy.Subscriber('/'+ROBOT_ID+'/move_base/status', GoalStatusArray, self.status_update) # status from move base action server 
-            self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10)
             err_flag = False
             if (self.act_client.wait_for_server(timeout=rospy.Duration.from_sec(5))): # wait for server start up
             #rospy.loginfo('[ {} ]: Move Base Server Running'.format(rospy.get_name()))
                 pass
             else:
                 rospy.logerr('[ {} ]: Timedout waiting for move base Server!'.format(rospy.get_name()))  
-                err_flag = True      
+                err_flag = True     
+        self.action_status_pub = rospy.Publisher('/'+ROBOT_ID+'/rob_action_status', RobActionStatus, queue_size=10) 
 
         self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10) # used for interfacing with the ros_mocap package
         #self.klt_num_pub = rospy.Publisher('/'+ROBOT_ID+'/klt_num', String, queue_size=10)
@@ -161,8 +160,10 @@ class PlaceAction:
         if (data.action == 'place'):
             self.command_id = data.command_id # Note: command id is updated only when the action is chosen and not for all sent actions
             self.action = data.action
-            self.cart_id= data.cart_id
+            # self.cart_id= data.cart_id
             self.station_id = data.station_id
+            print('station id', )
+            self.bound_mode = data.bound_mode
             dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
             if (dock_flag == True):
                 Xwaypoints = data.Xwaypoints
@@ -171,6 +172,7 @@ class PlaceAction:
                 goal.Xwaypoints = Xwaypoints
                 goal.Ywaypoints = Ywaypoints
                 goal.action = data.action
+                goal.station_id = data.station_id
 
                 rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
                 self.act_client.send_goal(goal) # non-blocking

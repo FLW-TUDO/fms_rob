@@ -164,19 +164,26 @@ class PickAction:
             self.command_id = data.command_id # Note: command id is updated only when the action is chosen and not for all sent actions
             self.action = data.action
             self.cart_id= data.cart_id
+            print('Cart ', self.cart_id)
             self.station_id = data.station_id
             self.direction = data.direction
             home_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/home')
             undock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/undock')
             if ((home_flag == True) or (undock_flag == True)):
                 #print('calculating docking position for cart_id: {}'.format(self.cart_id)) ###
-                
+                # dock_pose = self.calc_dock_position(self.cart_id)
+                # print('x', dock_pose.orientation.x)
+                # print('y', dock_pose.orientation.y)
+                # print('z', dock_pose.orientation.z)
+                # print('w', dock_pose.orientation.w)
                 Xwaypoints = data.Xwaypoints
                 Ywaypoints = data.Ywaypoints
+                
                 goal = followWaypointsGoal()
                 goal.Xwaypoints = Xwaypoints
                 goal.Ywaypoints = Ywaypoints
-                goal.action = data.action               
+                goal.action = data.action
+                #goal.cart_id = data.cart_id               
 
                 rospy.loginfo('[ {} ]: Sending waypoints list to action server'.format(rospy.get_name())) 
                 self.act_client.send_goal(goal) # non-blocking
