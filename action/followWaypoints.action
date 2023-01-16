@@ -1,6 +1,7 @@
 float64[] Xwaypoints
 float64[] Ywaypoints
 string action
+string station_id
 ---
 bool res
 ---
