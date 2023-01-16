@@ -3,8 +3,9 @@
   <name>fms_rob</name>
   <version>0.2.1</version>
   <description>The fms_rob package</description>
+  
 
-  <maintainer email="hazem.youssef@tu-dortmund.de">Hazem Youssef</maintainer>
+  <maintainer email="lokeshwaran.manohar@tu-dortmund.de">Lokeshwaran Manohar</maintainer>
 
   <license>BSD</license>
 
