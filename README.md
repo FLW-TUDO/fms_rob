@@ -27,7 +27,7 @@ For sending commands and receiving status info from the API.
 
 ```
 Broker: gopher.phynetlab.com  
-Port: 8888
+Port: 8883
 ```
 
 ### **MQTT Message Structure:**
