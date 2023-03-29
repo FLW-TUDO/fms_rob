@@ -153,6 +153,15 @@ class FollowWPActionServer:
                     vel_msg.angular.z = self.orientation_controller(theta_goal)
                     # Publishing our vel_msg
                     self.vel_pub.publish(vel_msg)
+                vel_msg.linear.x = 0
+                vel_msg.linear.y = 0
+                vel_msg.linear.z = 0
+                # Angular velocity in the z-axis.
+                vel_msg.angular.x = 0
+                vel_msg.angular.y = 0
+                vel_msg.angular.z = 0
+                # Publishing our vel_msg
+                self.vel_pub.publish(vel_msg)
                 rospy.loginfo('[ {} ]: Orientation Corrected Successfully!'. format(rospy.get_name()))
             self.result.res = True
             self.follow_waypoints_server.set_succeeded(self.result)
