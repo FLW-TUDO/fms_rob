@@ -93,7 +93,10 @@ class DUActionClient:
             self.direction = data.direction
             goal = dockUndockGoal()
             return_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/return')
-            if(return_flag == True):
+            place_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/place')
+            dock_flag = rospy.get_param('/'+ROBOT_ID+'/dynamic_reconf_server/dock')
+            #if(return_flag == True):
+            if((return_flag == True) or (place_flag == True) or (dock_flag == True)):
                 status = self.act_client.get_state()
                 if (status != 1):
                     goal.distance = 0.5 # fixed distance when robot moves out from under cart
@@ -165,7 +168,9 @@ class DUActionClient:
                     print('--------------------------------')
                     self.reconf_client.update_configuration({"undock": True})
                     self.reconf_client.update_configuration({"return": False})
-                self.act_client.stop_tracking_goal()
+                    self.reconf_client.update_configuration({"place": False})
+                    self.reconf_client.update_configuration({"dock": False})
+                    self.act_client.stop_tracking_goal()
                 self.status_flag = False
                 return
             if (status == 4): # if action execution is aborted
