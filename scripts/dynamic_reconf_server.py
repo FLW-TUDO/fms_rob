@@ -22,4 +22,4 @@ if __name__ == "__main__":
     rospy.init_node('dynamic_reconf_server', anonymous = False)
     rospy.on_shutdown(shutdown_hook)
     srv = Server(dynamic_paramsConfig, callback)
-    rospy.spin()
+    rospy.spin()    
