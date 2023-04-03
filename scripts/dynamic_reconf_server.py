@@ -17,6 +17,7 @@ def callback(config, level): # callback called when a parameter is updated
 def shutdown_hook():
     rospy.logwarn('Dynamic Reconf Server node shutdown by user')
 
+
 if __name__ == "__main__":
     rospy.init_node('dynamic_reconf_server', anonymous = False)
     rospy.on_shutdown(shutdown_hook)
