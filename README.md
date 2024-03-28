@@ -26,8 +26,8 @@ For sending commands and receiving status info from the API.
 ### **MQTT Settings:**
 
 ```
-Broker: gopher.phynetlab.com  
-Port: 8883
+Broker: 192.168.2.9
+Port: 1883
 ```
 
 ### **MQTT Message Structure:**
