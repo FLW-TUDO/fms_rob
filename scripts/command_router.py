@@ -27,8 +27,10 @@ WaypointMode = rospy.get_param('/'+ROBOT_ID+'/Waypoint_Mode') #follow Waypoints 
 """
 MQTT Settings
 """
-broker_address= "gopher.phynetlab.com"
-port = 8883
+#broker_address= "gopher.phynetlab.com"
+#port = 8883
+broker_address= "192.168.2.9"
+port = 1883
 Connected = False  
 
 def on_connect(client, userdata, flags, rc):
